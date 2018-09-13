@@ -116,13 +116,19 @@ function copy_es_systems_cfg() {
 function update_system() {
     echo
     echo "> Updating values for system '$SYSTEM_NAME' ..."
-    local message="New values for '$SYSTEM_NAME':"
+    echo
+    local message
+    message="New values for '$SYSTEM_NAME':"
     underline "$message"
     for system_property in "${SYSTEM_PROPERTIES[@]}"; do
+        local key
+        local value
         key="$(echo $system_property | grep  -Eo "^[^ ]+")"
         value="$(echo $system_property | grep -Po "(?<= ).*")"
         if [[ -n "$value" ]]; then
             xmlstarlet ed -L -u "/systemList/system[name='$SYSTEM_NAME']/$key" -v "$value" "$USER_ES_SYSTEM_CFG"
+        else
+            value="-"
         fi
         echo "$key: $value"
     done
@@ -159,20 +165,26 @@ function create_new_system() {
     echo "> Creating system '$SYSTEM_NAME' ..."
     # Check if <system> exists
     if xmlstarlet sel -t -v "/systemList/system[name='$SYSTEM_NAME']" "$USER_ES_SYSTEM_CFG" > /dev/null; then
-        echo "System '$SYSTEM_NAME' already exists in custom '$(basename "$USER_ES_SYSTEM_CFG")'."
+        echo "System '$SYSTEM_NAME' already exists in '$USER_ES_SYSTEM_CFG'."
         echo
-        local message="Current '$SYSTEM_NAME' values:"
+        # Show <system> values
+        local message
+        message="Current '$SYSTEM_NAME' values:"
         underline "$message"
         for system_property in "${SYSTEM_PROPERTIES[@]}"; do
+            local key
+            local value
             key="$(echo $system_property | grep  -Eo "^[^ ]+")"
             value="$(echo $system_property | grep -Po "(?<= ).*")"
-            #~ if [[ -n "$value" ]]; then
-                echo "$key: $value"
-            #~ fi
+            if [[ -z "$value" ]]; then
+                value="-"
+            fi
+            echo "$key: $value"
         done
         dashes=
         for ((i=1; i<="${#message}"; i+=1)); do [[ -n "$dashes" ]] && dashes+="-" || dashes="-"; done && echo "$dashes"
         echo
+        # Ask if the user wants to update <system> values
         echo "Would you like to update '$SYSTEM_NAME' values?"
         local options=("Yes" "No")
         local option
@@ -183,6 +195,7 @@ function create_new_system() {
                     local return_value
                     return_value="$?"
                     if [[ "$return_value" -eq 0 ]]; then
+                        echo
                         echo "Values for '$SYSTEM_NAME' updated successfully!"
                     else
                         echo "ERROR: Couldn't update values for '$SYSTEM_NAME'" >&2
@@ -193,7 +206,7 @@ function create_new_system() {
                     break
                     ;;
                 *)
-                    echo "Invalid option. Choose a number between 1 and ${#options[@]}."
+                    echo "Invalid option. Choose a number between 1 and ${#options[@]}." >&2
                     ;;
             esac
         done
