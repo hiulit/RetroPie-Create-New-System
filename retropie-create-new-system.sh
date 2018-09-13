@@ -97,18 +97,18 @@ function underline() {
 
 function copy_es_systems_cfg() {
     echo
-    echo "> Copying '$(basename "$ES_SYSTEMS_CFG")' ..."
+    echo "> Copying '$ES_SYSTEMS_CFG' to '$USER_ES_SYSTEM_CFG' ..."
     if [[ ! -f "$USER_ES_SYSTEM_CFG" ]]; then
         cp "$ES_SYSTEMS_CFG" "$USER_ES_SYSTEM_CFG"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
-            echo "$(basename "$ES_SYSTEMS_CFG") copied successfully!"
+            echo "'$USER_ES_SYSTEM_CFG' copied successfully!"
         else
-            echo "ERROR: Couldn't copy $(basename "$ES_SYSTEMS_CFG")" >&2
+            echo "ERROR: Couldn't copy '"$ES_SYSTEMS_CFG"'" >&2
         fi
     else
-        echo "Custom '$(basename "$USER_ES_SYSTEM_CFG")' already exists ... Move along!"
+        echo "'$USER_ES_SYSTEM_CFG' already exists ... Move along!"
     fi
 }
 
