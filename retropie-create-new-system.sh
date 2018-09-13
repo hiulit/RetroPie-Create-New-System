@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# retropie-homebrew-hacks.sh
+# retropie-create-new-system.sh
 #
-# RetroPie Homebrew and Hacks
-# [SCRIPT_DESCRIPTION] (e.g. A template for building shell scripts for RetroPie.)
+# RetroPie Create New System
+# A tool for RetroPie to create new systems for EmulationStation.
 #
-# Author: [AUTHOR] (e.g. hiulit)
-# Repository: [REPO_URL] (e.g. https://github.com/hiulit/RetroPie-Homebrew-Hacks)
-# License: [LICENSE] [LICENSE_URL] (e.g. MIT https://github.com/hiulit/retroPie-Homebrew-Hacks/blob/master/LICENSE)
+# Author: hiulit
+# Repository: https://github.com/hiulit/RetroPie-Create-New-System
+# License: MIT License https://github.com/hiulit/RetroPie-Create-New-System/blob/master/LICENSE
 #
 # Requirements:
 # - RetroPie 4.x.x
