@@ -1,45 +1,35 @@
-# [SCRIPT_TITLE] (e.g. RetroPie Shell Script Boilerplate)
+# RetroPie Create New System
 
-[SCRIPT_DESCRIPTION] (e.g. A template for building shell scripts for RetroPie.)
+A tool for RetroPie to create new systems for EmulationStation.
 
 ## Installation
 
 ```
 cd /home/pi/
-git clone [REPO_URL] (e.g. https://github.com/hiulit/RetroPie-Shell-Script-Boilerplate)
-cd [REPO_NAME]/ (e.g RetroPie-Shell-Script-Boilerplate)
-sudo chmod +x [SCRIPT_NAME].sh (e.g. retropie-shell-script-boilerplate)
+git clone https://github.com/hiulit/RetroPie-Create-New-System
+cd RetroPie-Create-New-System
+sudo chmod +x retropie-create-new-system.sh
 ```
 
 ## Usage
 
-**COMMENTS:**
-- **Add `sudo` before `./[SCRIPT_NAME].sh` if the script needs to be run under sudo.**
-- **Don't change `[OPTIONS]`!**
-- **Remember to remove these comments.**
-
 ```
-./[SCRIPT_NAME].sh [OPTIONS] (e.g. retropie-shell-script-boilerplate) 
+./retropie-create-new-system.sh [OPTIONS] 
 ```
 
 If no options are passed, you will be prompted with a usage example:
 
 ```
-USAGE: sudo ./[SCRIPT_NAME].sh [OPTIONS] (e.g. retropie-shell-script-boilerplate)
+USAGE: ./retropie-create-new-system.sh [OPTIONS]
 
 Use '--help' to see all the options.
 ```
 
 ## Options
 
-**COMMENTS:**
-- **Add as many `--[OPTION]: [OPTION_DESCRIPTION]` as you need.**
-- **Remember to remove these comments.**
 
-```
---help: Print the help message and exit.
---[OPTION]: [OPTION_DESCRIPTION] (e.g --version: Show script version.)
-```
+* `--help`: Print the help message and exit.
+* `--version`: Show script version.
 
 ## Examples
 
@@ -49,11 +39,8 @@ Print the help message and exit.
 
 #### Example
 
-**COMMENTS:**
-- **Add `sudo` before `./[SCRIPT_NAME].sh` if the script needs to be run under sudo.**
-- **Remember to remove these comments.**
 
-`./[SCRIPT_NAME].sh --help (e.g. retropie-shell-script-boilerplate)`
+`./retropie-create-new-system.sh --help`
 
 ### `--version`
 
@@ -61,23 +48,8 @@ Show script version.
 
 #### Example
 
-**COMMENTS:**
-- **Add `sudo` before `./[SCRIPT_NAME].sh` if the script needs to be run under sudo.**
-- **Remember to remove these comments.**
+`./retropie-create-new-system.sh --version`
 
-`./[SCRIPT_NAME].sh --version (e.g. retropie-shell-script-boilerplate)`
-
-### `--[OPTION]`
-
-[OPTION_DESCRIPTION]
-
-#### Example
-
-**COMMENTS:**
-- **Add `sudo` before `./[SCRIPT_NAME].sh` if the script needs to be run under sudo.**
-- **Remember to remove these comments.**
-
-`./[SCRIPT_NAME].sh --[OPTION] (e.g. retropie-shell-script-boilerplate)`
 
 ## Config file
 
@@ -113,16 +85,14 @@ See [CONTRIBUTING](/CONTRIBUTING.md).
 
 ## Authors
 
-* Yourself
-* Another person.
+* Me 😛 [@hiulit](https://github.com/hiulit).
 
 ## Credits
 
 Thanks to:
-
-* That person.
-* That other person.
+ 
+* All the people at the [RetroPie Forum](https://retropie.org.uk/forum/).
 
 ## License
 
-[[LICENSE]](/LICENSE). (e.g. MIT License)
+[MIT License](/LICENSE).
