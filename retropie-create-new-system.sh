@@ -2,7 +2,7 @@
 # retropie-create-new-system.sh
 #
 # RetroPie Create New System
-# A tool for RetroPie to create new systems for EmulationStation.
+# A tool for RetroPie to create a new system for EmulationStation.
 #
 # Author: hiulit
 # Repository: https://github.com/hiulit/RetroPie-Create-New-System
@@ -16,7 +16,8 @@
 user="$SUDO_USER"
 [[ -z "$user" ]] && user="$(id -un)"
 
-home="$(eval echo ~$user)"
+home="$(find /home -type d -name RetroPie -print -quit 2> /dev/null)"
+home="${home%/RetroPie}"
 
 readonly RP_DIR="$home/RetroPie"
 readonly RP_CONFIG_DIR="/opt/retropie/configs"
@@ -24,12 +25,12 @@ readonly RP_ROMS_DIR="$RP_DIR/roms"
 readonly ES_SYSTEMS_CFG="/etc/emulationstation/es_systems.cfg"
 readonly USER_ES_SYSTEM_CFG="$RP_CONFIG_DIR/all/emulationstation/es_systems.cfg"
 
-readonly SCRIPT_VERSION="0.0.1"
+readonly SCRIPT_VERSION="1.0.0"
 readonly SCRIPT_DIR="$(cd "$(dirname $0)" && pwd)"
 readonly SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_FULL="$SCRIPT_DIR/$SCRIPT_NAME"
-readonly SCRIPT_TITLE="RetroPie Homebrew and Hacks"
-readonly SCRIPT_DESCRIPTION="[SCRIPT_DESCRIPTION]"
+readonly SCRIPT_TITLE="RetroPie Create New System"
+readonly SCRIPT_DESCRIPTION="A tool for RetroPie to create a new system for EmulationStation."
 
 
 # Variables ##################################################################
@@ -52,48 +53,16 @@ SYSTEM_PROPERTIES=(
     "theme $system_theme"
 )
 
-emulators=("nes" "snes")
+emulators=("gba")
+
+
+# External resources ######################################
+
+source "$SCRIPT_DIR/utils/base.sh"
+source "$SCRIPT_DIR/utils/dialogs.sh"
 
 
 # Functions ##################################################################
-
-function is_retropie() {
-    [[ -d "$RP_DIR" && -d "$home/.emulationstation" && -d "/opt/retropie" ]]
-}
-
-
-function check_argument() {
-    # This method doesn't accept arguments starting with '-'.
-    if [[ -z "$2" || "$2" =~ ^- ]]; then
-        echo >&2
-        echo "ERROR: '$1' is missing an argument." >&2
-        echo >&2
-        echo "Try '$0 --help' for more info." >&2
-        echo >&2
-        return 1
-    fi
-}
-
-
-function usage() {
-    echo
-    echo "USAGE: $0 [OPTIONS]"
-    echo
-    echo "Use '$0 --help' to see all the options."
-}
-
-
-function underline() {
-    if [[ -z "$1" ]]; then
-        echo "ERROR: '$FUNCNAME' needs a message as an argument!" >&2
-        exit 1
-    fi
-    local dashes
-    local message="$1"
-    echo "$message"
-    for ((i=1; i<="${#message}"; i+=1)); do [[ -n "$dashes" ]] && dashes+="-" || dashes="-"; done && echo "$dashes"
-}
-
 
 function copy_es_systems_cfg() {
     echo
@@ -330,11 +299,11 @@ function add_emulators_to_system_emulators_cfg() {
 }
 
 
-copy_es_systems_cfg
-create_new_system
-create_system_emulators_cfg
-add_emulators_to_system_emulators_cfg
-exit
+# copy_es_systems_cfg
+# create_new_system
+# create_system_emulators_cfg
+# add_emulators_to_system_emulators_cfg
+# exit
 
 
 function get_options() {
@@ -349,6 +318,7 @@ function get_options() {
                 underline "$SCRIPT_TITLE"
                 echo "$SCRIPT_DESCRIPTION"
                 echo
+                echo
                 echo "USAGE: $0 [OPTIONS]"
                 echo
                 echo "OPTIONS:"
@@ -360,22 +330,23 @@ function get_options() {
 #H -v, --version                Show script version.
             -v|--version)
                 echo "$SCRIPT_VERSION"
+                exit 0
                 ;;
             *)
-                echo "ERROR: invalid option '$1'" >&2
+                echo "ERROR: Invalid option '$1'" >&2
+                echo "Try 'sudo $0 --help' for more info." >&2
                 exit 2
                 ;;
         esac
     fi
 }
 
+
 function main() {
     if ! is_retropie; then
         echo "ERROR: RetroPie is not installed. Aborting ..." >&2
         exit 1
     fi
-
-    check_dependencies
 
     get_options "$@"
 }
