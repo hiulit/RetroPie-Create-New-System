@@ -13,6 +13,41 @@ function is_sudo() {
 }
 
 
+function check_dependencies() {
+    local pkg
+    for pkg in "${DEPENDENCIES[@]}"; do
+        if ! dpkg-query -W -f='${Status}' "$pkg" | awk '{print $3}' | grep -q "^installed$"; then
+            echo "WHOOPS! The '$pkg' package is not installed!"
+            echo "Would you like to install it now?"
+            local options=("Yes" "No")
+            local option
+            select option in "${options[@]}"; do
+                case "$option" in
+                    Yes)
+                        if ! which apt-get > /dev/null; then
+                            log "ERROR: Can't install '$pkg' automatically. Try to install it manually."
+                            exit 1
+                        else
+                            if sudo apt-get install "$pkg"; then
+                                log "YIPPEE! The '$pkg' package installation was successfull!"
+                            fi
+                            break
+                        fi
+                        ;;
+                    No)
+                        log "ERROR: Can't launch the script if the '$pkg' package is not installed."
+                        exit 1
+                        ;;
+                    *)
+                        echo "Invalid option. Choose a number between 1 and ${#options[@]}."
+                        ;;
+                esac
+            done
+        fi
+    done
+}
+
+
 function restart_ES() {
     local restart_file="/tmp/es-restart"
     touch "$restart_file"
@@ -58,7 +93,7 @@ function usage() {
 
 function underline() {
     if [[ -z "$1" ]]; then
-        echo "ERROR: '$FUNCNAME' needs a message as an argument!" >&2
+        echo "ERROR: '$FUNCNAME' needs a string as an argument!" >&2
         exit 1
     fi
     local dashes
@@ -66,4 +101,22 @@ function underline() {
     [[ "$GUI_FLAG" -eq 1 ]] && log "$message" || echo "$message"
     for ((i=1; i<="${#message}"; i+=1)); do [[ -n "$dashes" ]] && dashes+="-" || dashes="-"; done
     [[ "$GUI_FLAG" -eq 1 ]] && log "$dashes" || echo "$dashes"
+}
+
+
+function trim() {
+    if [[ -z "$1" ]]; then
+        echo "ERROR: '$FUNCNAME' needs a string as an argument!" >&2
+        exit 1
+    fi
+    local string="$1"
+    echo "${string}" | sed -e 's/^[[:space:]]*//'
+}
+
+function is_mandatory_field() {
+    if [[ -z "$1" ]]; then
+        echo "ERROR: '$FUNCNAME' needs a string as an argument!" >&2
+        exit 1
+    fi
+    [[ "$1" == "name" || "$1" == "path" || "$1" == "extension" || "$1" == "command"  ]] && return 0
 }

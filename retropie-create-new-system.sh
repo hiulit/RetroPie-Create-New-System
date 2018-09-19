@@ -22,7 +22,9 @@ home="${home%/RetroPie}"
 readonly RP_DIR="$home/RetroPie"
 readonly RP_CONFIG_DIR="/opt/retropie/configs"
 readonly RP_ROMS_DIR="$RP_DIR/roms"
+readonly ES_THEMES_DIR="/etc/emulationstation/themes"
 readonly ES_SYSTEMS_CFG="/etc/emulationstation/es_systems.cfg"
+readonly ES_SETTINGS_CFG="/opt/retropie/configs/all/emulationstation/es_settings.cfg"
 readonly USER_ES_SYSTEM_CFG="$RP_CONFIG_DIR/all/emulationstation/es_systems.cfg"
 
 readonly SCRIPT_VERSION="1.0.0"
@@ -31,6 +33,8 @@ readonly SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_FULL="$SCRIPT_DIR/$SCRIPT_NAME"
 readonly SCRIPT_TITLE="RetroPie Create New System"
 readonly SCRIPT_DESCRIPTION="A tool for RetroPie to create a new system for EmulationStation."
+
+readonly DEPENDENCIES=("imagemagick" "librsvg2-bin")
 
 
 # Variables ##################################################################
@@ -41,7 +45,7 @@ SYSTEM_PATH="$RP_ROMS_DIR/hh"
 SYSTEM_EXTENSION=".nes .zip .NES .ZIP"
 SYSTEM_COMMAND="/opt/retropie/supplementary/runcommand/runcommand.sh 0 _SYS_ hh %ROM%"
 SYSTEM_PLATFORM=""
-system_theme="hh"
+SYSTEM_THEME="hh"
 
 SYSTEM_PROPERTIES=(
     "name $SYSTEM_NAME"
@@ -50,19 +54,118 @@ SYSTEM_PROPERTIES=(
     "extension $SYSTEM_EXTENSION"
     "command $SYSTEM_COMMAND"
     "platform $SYSTEM_PLATFORM"
-    "theme $system_theme"
+    "theme $SYSTEM_THEME"
 )
 
-emulators=("gba")
+EMULATORS=(
+    "nes"
+    "gba"
+    "snes"
+    "gbc"
+)
+
+SYSTEM_FIELDS=(
+    "name"
+    "fullname"
+    "path"
+    "extension"
+    "command"
+    "platform"
+    "theme"
+)
+
+NEW_SYSTEM_PROPERTIES=()
+
+DEFAULT_THEME="carbon"
 
 
 # External resources ######################################
 
 source "$SCRIPT_DIR/utils/base.sh"
 source "$SCRIPT_DIR/utils/dialogs.sh"
+source "$SCRIPT_DIR/utils/imagemagick.sh"
 
 
 # Functions ##################################################################
+
+function get_current_theme() {
+    if [[ ! -f "$ES_SETTINGS_CFG" ]]; then
+        echo "$DEFAULT_THEME"
+    else
+        sed -n "/name=\"ThemeSet\"/ s/^.*value=['\"]\(.*\)['\"].*/\1/p" "$ES_SETTINGS_CFG"
+    fi
+}
+
+
+function get_font() {
+    local theme
+    theme="$(get_current_theme)"
+    if [[ -z "$theme" ]]; then
+        echo "WARNING: Couldn't get the current theme."
+        echo "Switching to the default's theme ..."
+        theme="$DEFAULT_THEME"
+    fi
+    local font
+    font="$(xmlstarlet sel -t -v \
+        "/theme/view[contains(@name,'detailed')]/textlist/fontPath" \
+        "$ES_THEMES_DIR/$theme/$theme.xml" 2> /dev/null)"
+
+    if [[ -n "$font" ]]; then
+        font="$ES_THEMES_DIR/$theme/$font"
+    else
+        # Note: the find function below returns the full path file name.
+        font="$(find "$ES_THEMES_DIR/$theme/" -type f -name '*.ttf' -print -quit 2> /dev/null)"
+        if [[ -z "$font" ]]; then
+            echo "ERROR: Unable to get the font from the '$theme' theme files."
+            echo "Aborting ..." >&2
+            exit 1
+        fi
+    fi
+    echo "$font"
+}
+
+
+function get_system_logo() {
+    if [[ ! -f "$ES_THEMES_DIR/$theme/$system/theme.xml" ]]; then
+        if [[ "$system" = *"mame-"* ]]; then
+            system="mame"
+        fi
+    fi
+    local logo
+    logo="$(xmlstarlet sel -t -v \
+        "/theme/view[contains(@name,'detailed') or contains(@name,'system')]/image[@name='logo']/path" \
+        "$ES_THEMES_DIR/$theme/$system/theme.xml" 2> /dev/null | head -1)"
+    logo="$ES_THEMES_DIR/$theme/$system/$logo"
+    if [[ -f "$logo" ]]; then
+        echo "$logo"
+    else
+        return 1
+    fi
+}
+
+
+function get_console() {
+    if [[ ! -f "$ES_THEMES_DIR/$theme/$system/theme.xml" ]]; then
+        if [[ "$system" = *"mame-"* ]]; then
+            system="mame"
+        fi
+    fi
+    local console
+    console="$(xmlstarlet sel -t -v \
+        "/theme/view[contains(@name,'detailed') or contains(@name,'system')]/image[@name='console_overlay' or @name='ControllerOverlay']/path" \
+        "$ES_THEMES_DIR/$theme/$system/theme.xml" 2> /dev/null | head -1)"
+    console="$ES_THEMES_DIR/$theme/$system/$console"
+    if [[ -f "$console" ]]; then
+        echo "$console"
+    else
+        return 1
+    fi
+}
+
+function get_theme_xml() {
+    echo "$ES_THEMES_DIR/$theme/$system/theme.xml"
+}
+
 
 function copy_es_systems_cfg() {
     echo
@@ -77,8 +180,9 @@ function copy_es_systems_cfg() {
             echo "ERROR: Couldn't copy '"$ES_SYSTEMS_CFG"'" >&2
         fi
     else
-        echo "'$USER_ES_SYSTEM_CFG' already exists ... Move along!"
+        echo "WHOOPS! '$USER_ES_SYSTEM_CFG' already exists."
     fi
+    echo "> Done!"
 }
 
 
@@ -124,8 +228,9 @@ function create_system_roms_dir() {
             echo "ERROR: Couldn't create '$path'." >&2
         fi
     else
-        echo "'$path' already exists ... Move along!"
+        echo "WHOOPS! '$path' already exists."
     fi
+    echo "> Done!"
 }
 
 
@@ -208,6 +313,7 @@ function create_new_system() {
         echo
         echo "System '$SYSTEM_NAME' created successfully!"
     fi
+    echo "> Done!"
 }
 
 function remove_system() {
@@ -230,6 +336,7 @@ function remove_system() {
     else
         echo "ERROR: Couldn't remove system '$system'. It doesn't exist!" >&2
     fi
+    echo "> Done!"
 }
 
 #~ xmlstarlet sel -t -v "/systemList/system[name='hh']" "$USER_ES_SYSTEM_CFG"
@@ -245,7 +352,7 @@ function remove_system() {
 
 
 #~ function update_system_emulators_cfg() {
-    
+
 #~ }
 
 
@@ -261,7 +368,7 @@ function create_system_emulators_cfg() {
         else
             echo "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME'." >&2
         fi
-        
+
         touch "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
         local return_value
         return_value="$?"
@@ -271,15 +378,16 @@ function create_system_emulators_cfg() {
             echo "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg'." >&2
         fi
     else
-        echo "'$RP_CONFIG_DIR/$SYSTEM_NAME' already exists ... Move along!"
+        echo "WHOOPS! '$RP_CONFIG_DIR/$SYSTEM_NAME' already exists."
     fi
+    echo "> Done!"
 }
 
 
 function add_emulators_to_system_emulators_cfg() {
     echo
     echo "> Adding emulators to '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' ..."
-    for emulator in "${emulators[@]}"; do
+    for emulator in "${EMULATORS[@]}"; do
         echo "> Adding '$emulator' ..."
         cat "$RP_CONFIG_DIR/$emulator/emulators.cfg" >> "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
         local return_value
@@ -296,6 +404,7 @@ function add_emulators_to_system_emulators_cfg() {
     local remove_duplicates
     remove_duplicates="$(awk '!a[$0]++' "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg")"
     echo "$remove_duplicates" > "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
+    echo "> Done!"
 }
 
 
@@ -327,6 +436,10 @@ function get_options() {
                 echo
                 exit 0
                 ;;
+#H -g, --gui                    Start the GUI.
+            -g|--gui)
+                dialog_create_new_system
+                ;;
 #H -v, --version                Show script version.
             -v|--version)
                 echo "$SCRIPT_VERSION"
@@ -347,6 +460,11 @@ function main() {
         echo "ERROR: RetroPie is not installed. Aborting ..." >&2
         exit 1
     fi
+
+    check_dependencies
+
+    IM
+    exit
 
     get_options "$@"
 }
