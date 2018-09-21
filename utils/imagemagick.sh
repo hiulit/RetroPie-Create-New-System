@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # imagemagick.sh
 
-function IM() {
+function IM_create_system_assets() {
     local extension
     local font
     local image_h
@@ -13,9 +13,9 @@ function IM() {
     local system_logo_text
     local system_text
     local theme
-    local theme_xml
+    local system_theme_xml
     local user_console
-    local user_system
+    local user_system_name
 
     system="retropie"
     theme="$(get_current_theme)"
@@ -23,7 +23,7 @@ function IM() {
 
     system_console="$(get_console)"
     system_logo="$(get_system_logo)"
-    theme_xml="$(get_theme_xml)"
+    system_theme_xml="$(get_theme_xml)"
 
     extension="${system_console##*.}"
     if [[ "$extension" == "svg" ]]; then
@@ -40,23 +40,23 @@ function IM() {
     image_w=500
     system_text="A cande more nauer"
     system_logo_text="New system"
-    user_system="hh"
+    user_system_name="hh"
 
-    user_console="$ES_THEMES_DIR/$theme/$user_system/$(basename "$system_console")"
-    user_logo="$ES_THEMES_DIR/$theme/$user_system/$(basename "$system_logo")"
+    user_console="$ES_THEMES_DIR/$theme/$user_system_name/$(basename "$system_console")"
+    user_logo="$ES_THEMES_DIR/$theme/$user_system_name/$(basename "$system_logo")"
 
-    tmp_system_label="$ES_THEMES_DIR/$theme/$user_system/tmp-system_label.$extension"
-    tmp_composite_image="$ES_THEMES_DIR/$theme/$user_system/tmp-multiple-systems.$extension"
-    tmp_system_logo="$ES_THEMES_DIR/$theme/$user_system/tmp-system-logo.$extension"
+    tmp_system_label="$ES_THEMES_DIR/$theme/$user_system_name/tmp-system_label.$extension"
+    tmp_composite_image="$ES_THEMES_DIR/$theme/$user_system_name/tmp-multiple-systems.$extension"
+    tmp_system_logo="$ES_THEMES_DIR/$theme/$user_system_name/tmp-system-logo.$extension"
 
-    # image_w="$(identify -format "%[fx:w]" "$ES_THEMES_DIR/$theme/$user_system/console.$extension")"
-    # image_h="$(identify -format "%[fx:h]" "$ES_THEMES_DIR/$theme/$user_system/console.$extension")"
+    # image_w="$(identify -format "%[fx:w]" "$ES_THEMES_DIR/$theme/$user_system_name/console.$extension")"
+    # image_h="$(identify -format "%[fx:h]" "$ES_THEMES_DIR/$theme/$user_system_name/console.$extension")"
 
     # Create user system folder and copy the 'console', 'system logo' and 'theme xml'.
-    mkdir -p "$ES_THEMES_DIR/$theme/$user_system"
-    cp "$system_console" "$ES_THEMES_DIR/$theme/$user_system"
-    cp "$system_logo" "$ES_THEMES_DIR/$theme/$user_system"
-    cp "$theme_xml" "$ES_THEMES_DIR/$theme/$user_system"
+    mkdir -p "$ES_THEMES_DIR/$theme/$user_system_name"
+    cp "$system_console" "$ES_THEMES_DIR/$theme/$user_system_name"
+    cp "$system_logo" "$ES_THEMES_DIR/$theme/$user_system_name"
+    cp "$system_theme_xml" "$ES_THEMES_DIR/$theme/$user_system_name"
 
     # Create the system label.
     convert \
@@ -98,7 +98,7 @@ function IM() {
         gravity="center"
         image_h_per=100
         image_w_per=100
-        tmp_system_image="$ES_THEMES_DIR/$theme/$user_system/tmp-$system.$extension"
+        tmp_system_image="$ES_THEMES_DIR/$theme/$user_system_name/tmp-$system.$extension"
 
 
         if [[ "${#EMULATORS[@]}" -eq 2 ]]; then
@@ -178,5 +178,5 @@ function IM() {
         "$user_logo"
 
     # Remove temporary files.
-    find "$ES_THEMES_DIR/$theme/$user_system" -maxdepth 1 -type f  -name 'tmp-*' -delete
+    find "$ES_THEMES_DIR/$theme/$user_system_name" -maxdepth 1 -type f  -name 'tmp-*' -delete
 }

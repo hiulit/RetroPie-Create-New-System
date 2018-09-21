@@ -41,11 +41,11 @@ readonly DEPENDENCIES=("imagemagick" "librsvg2-bin")
 
 SYSTEM_NAME="hh"
 SYSTEM_FULLNAME="Homebrew and Hacks"
-SYSTEM_PATH="$RP_ROMS_DIR/hh"
+SYSTEM_PATH="$RP_ROMS_DIR/$SYSTEM_NAME"
 SYSTEM_EXTENSION=".nes .zip .NES .ZIP"
-SYSTEM_COMMAND="/opt/retropie/supplementary/runcommand/runcommand.sh 0 _SYS_ hh %ROM%"
+SYSTEM_COMMAND="/opt/retropie/supplementary/runcommand/runcommand.sh 0 _SYS_ $SYSTEM_NAME %ROM%"
 SYSTEM_PLATFORM=""
-SYSTEM_THEME="hh"
+SYSTEM_THEME="$SYSTEM_NAME"
 
 SYSTEM_PROPERTIES=(
     "name $SYSTEM_NAME"
@@ -87,6 +87,17 @@ source "$SCRIPT_DIR/utils/imagemagick.sh"
 
 
 # Functions ##################################################################
+
+function get_all_systems() {
+    local system_names=()
+    local system_name
+    while read -r system_name; do
+        [[ "$system_name" != "retropie" ]] && system_names+=("$system_name")
+    done < <(xmlstarlet sel -t -v "systemList/system/name" "$ES_SYSTEMS_CFG" 2> /dev/null)
+
+    echo "${system_names[@]}"
+}
+
 
 function get_current_theme() {
     if [[ ! -f "$ES_SETTINGS_CFG" ]]; then
@@ -438,7 +449,8 @@ function get_options() {
                 ;;
 #H -g, --gui                    Start the GUI.
             -g|--gui)
-                dialog_create_new_system
+                # dialog_create_new_system
+                dialog_choose_system_name
                 ;;
 #H -v, --version                Show script version.
             -v|--version)
@@ -463,10 +475,17 @@ function main() {
 
     check_dependencies
 
-    IM
-    exit
+    # IM_create_system_assets
 
     get_options "$@"
+
+    echo "$SYSTEM_NAME"
+    echo "$SYSTEM_FULLNAME"
+    echo "$SYSTEM_PATH"
+    echo "$SYSTEM_EXTENSION"
+    echo "$SYSTEM_COMMAND"
+    echo "$SYSTEM_PLATFORM"
+    echo "$SYSTEM_THEME"
 }
 
 main "$@"
