@@ -75,6 +75,7 @@ SYSTEM_FIELDS=(
 )
 
 NEW_SYSTEM_PROPERTIES=()
+NEW_EMULATORS=()
 
 DEFAULT_THEME="carbon"
 
@@ -245,12 +246,25 @@ function create_system_roms_dir() {
 }
 
 
+function system_exists() {
+    if [[ -z "$1" ]]; then
+        echo "ERROR: '$FUNCNAME' needs a string as an argument!" >&2
+        exit 1
+    fi
+    local system="$1"
+    xmlstarlet sel -t -v "/systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null
+}
+
+
 function create_new_system() {
     echo
     echo "> Creating system '$SYSTEM_NAME' ..."
     # Check if <system> exists
-    if xmlstarlet sel -t -v "/systemList/system[name='$SYSTEM_NAME']" "$USER_ES_SYSTEM_CFG" > /dev/null; then
+    if system_exists "$SYSTEM_NAME"; then
         echo "System '$SYSTEM_NAME' already exists in '$USER_ES_SYSTEM_CFG'."
+
+        exit
+
         echo
         # Show <system> values
         local message
@@ -299,7 +313,7 @@ function create_new_system() {
         # Create a new <system> called "newSystem"
         xmlstarlet ed -L -s "/systemList" -t elem -n "newSystem" -v "" "$USER_ES_SYSTEM_CFG"
         # Add subnodes to <newSystem>
-        for system_property in "${SYSTEM_PROPERTIES[@]}"; do
+        for system_property in "${NEW_SYSTEM_PROPERTIES[@]}"; do
             local key
             local value
             key="$(echo $system_property | grep  -Eo "^[^ ]+")"
@@ -307,7 +321,7 @@ function create_new_system() {
             # Check for missing name, path, extension or command.
             if [[ "$key" == "name" || "$key" == "path" || "$key" == "extension" || "$key" == "command"  ]]; then
                 if [[ -z "$key" ]]; then
-                    echo "ERROR: System '$SYSTEM_NAME' is missing name, path, extension or command!" >&2
+                    echo "ERROR: System '$SYSTEM_NAME' is missing 'name', 'path', 'extension' or 'command'!" >&2
                     xmlstarlet ed -L -d "/systemList/newSystem"  "$USER_ES_SYSTEM_CFG"
                     exit 1
                 fi
@@ -475,17 +489,17 @@ function main() {
 
     check_dependencies
 
-    # IM_create_system_assets
+    # IM_create_new_system_assets
 
     get_options "$@"
 
-    echo "$SYSTEM_NAME"
-    echo "$SYSTEM_FULLNAME"
-    echo "$SYSTEM_PATH"
-    echo "$SYSTEM_EXTENSION"
-    echo "$SYSTEM_COMMAND"
-    echo "$SYSTEM_PLATFORM"
-    echo "$SYSTEM_THEME"
+    # echo "$SYSTEM_NAME"
+    # echo "$SYSTEM_FULLNAME"
+    # echo "$SYSTEM_PATH"
+    # echo "$SYSTEM_EXTENSION"
+    # echo "$SYSTEM_COMMAND"
+    # echo "$SYSTEM_PLATFORM"
+    # echo "$SYSTEM_THEME"
 }
 
 main "$@"

@@ -48,89 +48,34 @@ function dialog_yesno() {
 }
 
 
-function dialog_create_new_system() {
-    local options=()
-    local i=1
-    local dialog_items
-    local dialog_text
-    local cmd
-    local form_values
-
-    local field
-    for field in "${SYSTEM_FIELDS[@]}"; do
-        local value
-        value="$(echo ${SYSTEM_PROPERTIES[(($i - 1))]} | grep -Po "(?<= ).*")"
-        if is_mandatory_field "$field"; then
-            options+=("${field^}*" $i 1 "$value" $i 15 100 0)
-        else
-            options+=("${field^}" $i 1 "$value" $i 15 100 0)
-        fi
-        ((i++))
-    done
-
-    dialog_items="${#SYSTEM_FIELDS[@]}"
-    dialog_text="Here is the data for the new system.\nIf you want to edit a field, you can do so now.\nIf everything is correct, click 'Create system'.\n\nFields marked with (*) are mandatory."
-
-    cmd=(dialog \
-        --backtitle "$DIALOG_BACKTITLE" \
-        --title "Create system" \
-        --ok-label "Create system" \
-        --cancel-label "Exit" \
-        --extra-button \
-        --extra-label "Back" \
-        --form "$dialog_text" "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$dialog_items")
-
-    form_values="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
-    local return_value="$?"
-
-    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
-        if [[ -n "$form_values" ]]; then
-            local i=0
-            while read -r line; do
-                local key="${SYSTEM_FIELDS[$i]}"
-                local value="$line"
-                [[ -n "$value" ]] && value="$(trim "$value")"
-                NEW_SYSTEM_PROPERTIES+=("$key $value")
-                ((i++))
-            done <<< "$form_values"
-            # Check if 'name, path, extension or command' are set.
-            if ! grep -P '(?=.*?name)(?=.*?path)(?=.*?extension)(?=.*?command)^.*$' <<< "${NEW_SYSTEM_PROPERTIES[@]}"; then
-                echo "ERROR: System is missing name, path, extension or command!" >&2
-                exit
-            fi
-            local property
-            for property in "${NEW_SYSTEM_PROPERTIES[@]}"; do
-                local key
-                local value
-                key="$(echo $property | grep  -Eo "^[^ ]+")"
-                value="$(echo $property | grep -Po "(?<= ).*")"
-                echo "$key: $value"
-            done
-        else
-            echo "No input!"
-        fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
-        echo "exit"
-    fi
-
-}
-
-
 function dialog_choose_system_name() {
-    local input
     SYSTEM_PROPERTIES=()
+    local input
+    local previous_name
+
+    if [[ -n "$SYSTEM_NAME" ]]; then
+        previous_name="\n\nYou previously chose '$SYSTEM_NAME' as the system's name."
+    fi
 
     input="$(dialog \
                 --backtitle "$DIALOG_BACKTITLE" \
                 --title "Set name" \
                 --ok-label "Next" \
                 --cancel-label "Exit" \
-                --inputbox "Enter the system's name.\n\nThis is the short name used by EmulationStation internally, as well as the text used in the EmulationStation UI unless replaced by an image or logo in the theme. It is advised to choose something short and descriptive (e.g. 'favourites', 'hacks')." \
+                --inputbox "Enter the system's name.\n\nThis is the short name used by EmulationStation internally, as well as the text used in the EmulationStation UI unless replaced by an image or logo in the theme. It is advised to choose something short and descriptive (e.g. 'favourites', 'hacks').$previous_name" \
                 "$DIALOG_HEIGHT" "$DIALOG_WIDTH" 2>&1 >/dev/tty)"
      local return_value="$?"
 
     if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
         if [[ -n "$input" ]]; then
+            if system_exists "$input"; then
+                dialog_msgbox "Error!" "'$input' system already exists."
+                dialog_choose_system_name
+            fi
+            if has_space "$input"; then
+                dialog_msgbox "Error!" "System's name can't have spaces."
+                dialog_choose_system_name
+            fi
             SYSTEM_NAME="$input"
             SYSTEM_PATH="$RP_ROMS_DIR/$input"
             SYSTEM_COMMAND="/opt/retropie/supplementary/runcommand/runcommand.sh 0 _SYS_ $input %ROM%"
@@ -152,6 +97,11 @@ function dialog_choose_system_name() {
 
 function dialog_choose_system_fullname() {
     local input
+    local previous_fullname
+
+    if [[ -n "$SYSTEM_FULLNAME" ]]; then
+        previous_fullname="\n\nYou previously chose '$SYSTEM_FULLNAME' as the system's full name."
+    fi
 
     input="$(dialog \
                 --backtitle "$DIALOG_BACKTITLE" \
@@ -160,7 +110,7 @@ function dialog_choose_system_fullname() {
                 --cancel-label "Exit" \
                 --extra-button \
                 --extra-label "Back" \
-                --inputbox "Enter the system's full name.\n\nThis is the long name used in EmulationStation menus (e.g. 'My favourites games', 'Hacks and homebrew')." \
+                --inputbox "Enter the system's full name.\n\nThis is the long name used in EmulationStation menus (e.g. 'My favourites games', 'Hacks and homebrew').$previous_fullname" \
                 "$DIALOG_HEIGHT" "$DIALOG_WIDTH" 2>&1 >/dev/tty)"
      local return_value="$?"
 
@@ -168,7 +118,7 @@ function dialog_choose_system_fullname() {
         if [[ -n "$input" ]]; then
             SYSTEM_FULLNAME="$input"
             SYSTEM_PROPERTIES[1]="fullname $SYSTEM_FULLNAME"
-            dialog_choose_emulators
+            dialog_choose_platform
         else
             dialog_msgbox "Error!" "Enter the system's full name."
             dialog_choose_system_fullname
@@ -177,6 +127,40 @@ function dialog_choose_system_fullname() {
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_system_name
+    fi
+}
+
+function dialog_choose_platform() {
+    local input
+    local previous_platform
+
+    if [[ -n "$SYSTEM_PLATFORM" ]]; then
+        previous_platform="\n\nYou previously chose '$SYSTEM_PLATFORM' as the system's platform."
+    fi
+
+    input="$(dialog \
+                --backtitle "$DIALOG_BACKTITLE" \
+                --title "Set platform" \
+                --ok-label "Next" \
+                --cancel-label "Exit" \
+                --extra-button \
+                --extra-label "Back" \
+                --inputbox "Enter the system's platform.\n\nThis information is used for scraping.\nThis tag is optional so it may be best to omit it.\nIf you intend to use multiple emulators, for a favourites section for instance, then you can use existing gamelists to manually create a new gamelist.\nIf you are creating a section for mods or hacks, then it's unlikely you'll be able scrape metadata.$previous_platform" \
+                "$DIALOG_HEIGHT" "$DIALOG_WIDTH" 2>&1 >/dev/tty)"
+     local return_value="$?"
+
+    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+        if [[ -n "$input" ]]; then
+            SYSTEM_PLATFORM="$input"
+        else
+            SYSTEM_PLATFORM=""
+        fi
+        SYSTEM_PROPERTIES[5]="platform $SYSTEM_PLATFORM"
+        dialog_choose_emulators
+    elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
+        exit 0
+    elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
+        dialog_choose_system_fullname
     fi
 }
 
@@ -224,6 +208,7 @@ function dialog_choose_emulators() {
             else
                 for choice in "${choices[@]}"; do
                     system="${options[choice*3-2]}"
+                    NEW_EMULATORS+=("$system")
                     system_name_extensions+=("$(xmlstarlet sel -t -v "systemList/system[name='$system']/extension" "$ES_SYSTEMS_CFG" 2> /dev/null)")
                 done
                 SYSTEM_EXTENSION="${system_name_extensions[@]}"
@@ -237,8 +222,85 @@ function dialog_choose_emulators() {
     elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
-        dialog_choose_system_fullname
+        dialog_choose_platform
     fi
 }
 
 
+function dialog_create_new_system() {
+    local options=()
+    local i=1
+    local dialog_items
+    local dialog_text
+    local cmd
+    local form_values
+
+    local field
+    for field in "${SYSTEM_FIELDS[@]}"; do
+        local value
+        value="$(echo ${SYSTEM_PROPERTIES[(($i - 1))]} | grep -Po "(?<= ).*")"
+        if is_mandatory_field "$field"; then
+            options+=("${field^}*" $i 1 "$value" $i 15 100 0)
+        else
+            options+=("${field^}" $i 1 "$value" $i 15 100 0)
+        fi
+        ((i++))
+    done
+
+    dialog_items="${#SYSTEM_FIELDS[@]}"
+    dialog_text="The new '$SYSTEM_FULLNAME' system is ready to be created!\n\nIf you want to edit a field, you can do so now.\nIf everything is correct, click 'Ok'.\n\nWARNING: If you edit 'Name', you'll have to edit 'Path', 'Command' and 'Theme' accordingly.\n\nFields marked with (*) are mandatory."
+
+    cmd=(dialog \
+        --backtitle "$DIALOG_BACKTITLE" \
+        --title "Create system" \
+        --cancel-label "Exit" \
+        --extra-button \
+        --extra-label "Back" \
+        --form "$dialog_text" "$(((DIALOG_HEIGHT + 2)))" "$DIALOG_WIDTH" "$dialog_items")
+
+    form_values="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
+    local return_value="$?"
+
+    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+        if [[ -n "$form_values" ]]; then
+            local i=0
+            while read -r line; do
+                local key="${SYSTEM_FIELDS[$i]}"
+                local value="$line"
+                [[ -n "$value" ]] && value="$(trim "$value")"
+                NEW_SYSTEM_PROPERTIES+=("$key $value")
+                ((i++))
+            done <<< "$form_values"
+            # Check if 'name, path, extension or command' are set.
+            if ! grep -q -P '(?=.*?name)(?=.*?path)(?=.*?extension)(?=.*?command)^.*$' <<< "${NEW_SYSTEM_PROPERTIES[@]}"; then
+                dialog_msgbox "Error!" "ERROR: '$SYSTEM_FULLNAME' system is missing 'name', 'path', 'extension' or 'command'!"
+                dialog_create_new_system
+            fi
+            local property
+            for property in "${NEW_SYSTEM_PROPERTIES[@]}"; do
+                local key
+                local value
+                key="$(echo $property | grep  -Eo "^[^ ]+")"
+                value="$(echo $property | grep -Po "(?<= ).*")"
+                # Re-check if 'name, path, extension or command' are set.
+                if [[ "$key" == "name" || "$key" == "path" || "$key" == "extension" || "$key" == "command" ]]; then
+                    if [[ -z "$value" ]]; then
+                        dialog_msgbox "Error!" "ERROR: '$SYSTEM_FULLNAME' system is missing 'name', 'path', 'extension' or 'command'!"
+                        dialog_create_new_system
+                    fi
+                fi
+                echo "--------------------------"
+                echo "$key: $value"
+            done
+            create_new_system
+            create_system_emulators_cfg
+            add_emulators_to_system_emulators_cfg
+            # IM_create_new_system_assets
+        else
+            echo "No input!"
+        fi
+    elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
+        echo "exit"
+    fi
+
+}

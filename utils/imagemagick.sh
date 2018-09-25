@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # imagemagick.sh
 
-function IM_create_system_assets() {
+function IM_create_new_system_assets() {
     local extension
     local font
     local image_h

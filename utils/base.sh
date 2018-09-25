@@ -113,10 +113,20 @@ function trim() {
     echo "${string}" | sed -e 's/^[[:space:]]*//'
 }
 
+
 function is_mandatory_field() {
     if [[ -z "$1" ]]; then
         echo "ERROR: '$FUNCNAME' needs a string as an argument!" >&2
         exit 1
     fi
     [[ "$1" == "name" || "$1" == "path" || "$1" == "extension" || "$1" == "command"  ]] && return 0
+}
+
+
+function has_space {
+    if [[ -z "$1" ]]; then
+        echo "ERROR: '$FUNCNAME' needs a string as an argument!" >&2
+        exit 1
+    fi
+    [[ "$1" != "${1%[[:space:]]*}" ]] && return 0 || return 1
 }
