@@ -232,6 +232,7 @@ function create_system_roms_dir() {
     echo "> Creating '$path' ..."
     if [[ ! -d "$path" ]]; then
         mkdir -p "$value"
+        chown -R "$user":"$user" "$value"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
@@ -349,8 +350,9 @@ function remove_system() {
     fi
     local system="$1"
     echo "> Removing '$system' ..."
+    # Remove system from 'es_system.cfg'
     if xmlstarlet sel -t -v "/systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null; then
-        xmlstarlet ed -d "//system[name='$system']" "$USER_ES_SYSTEM_CFG"
+        xmlstarlet ed -L -d "//system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
@@ -367,8 +369,8 @@ function remove_system() {
 #~ xmlstarlet sel -t -v "/systemList/system[name='hh']" "$USER_ES_SYSTEM_CFG"
 #~ exit
 
-#~ remove_system "hh"
-#~ exit
+remove_system "hh"
+exit
 
 
 #~ function create_symbolic_link() {
