@@ -79,6 +79,10 @@ NEW_EMULATORS=()
 
 DEFAULT_THEME="carbon"
 
+## Flags
+
+WIZARD_FLAG=0
+
 
 # External resources ######################################
 
@@ -95,7 +99,6 @@ function get_all_systems() {
     while read -r system_name; do
         [[ "$system_name" != "retropie" ]] && system_names+=("$system_name")
     done < <(xmlstarlet sel -t -v "systemList/system/name" "$ES_SYSTEMS_CFG" 2> /dev/null)
-
     echo "${system_names[@]}"
 }
 
@@ -369,8 +372,8 @@ function remove_system() {
 #~ xmlstarlet sel -t -v "/systemList/system[name='hh']" "$USER_ES_SYSTEM_CFG"
 #~ exit
 
-remove_system "hh"
-exit
+# remove_system "hh"
+# exit
 
 
 #~ function create_symbolic_link() {
@@ -465,8 +468,7 @@ function get_options() {
                 ;;
 #H -g, --gui                    Start the GUI.
             -g|--gui)
-                # dialog_create_new_system
-                dialog_choose_system_name
+                dialog_main
                 ;;
 #H -v, --version                Show script version.
             -v|--version)

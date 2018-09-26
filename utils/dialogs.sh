@@ -48,23 +48,64 @@ function dialog_yesno() {
 }
 
 
+function dialog_main() {
+    local options=()
+    local menu_items
+    local menu_title
+    local menu_text
+    local cmd
+    local choice
+
+    options=(
+        1 "Wizard setup"
+        2 "Advanced setup"
+    )
+    menu_items="$(((${#options[@]} / 2)))"
+    menu_title="Create a new system"
+    menu_text="Choose an option."
+    cmd=(dialog \
+        --backtitle "$DIALOG_BACKTITLE" \
+        --title "$menu_title" \
+        --cancel-label "Exit" \
+        --menu "$menu_text" "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$menu_items")
+    choice="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
+    if [[ -n "$choice" ]]; then
+        case "$choice" in
+            1)
+                WIZARD_FLAG=1
+                dialog_choose_system_name
+                ;;
+            2)
+                dialog_create_new_system
+                ;;
+        esac
+    fi
+}
+
+
 function dialog_choose_system_name() {
     SYSTEM_PROPERTIES=()
-    local input
     local previous_name
+    local dialog_title
+    local dialog_text
+    local input
 
     if [[ -n "$SYSTEM_NAME" ]]; then
-        previous_name="\n\nYou previously chose '$SYSTEM_NAME' as the system's name."
+        previous_name="\n\nYou previously chose '$SYSTEM_NAME' as the system's <name>."
     fi
 
+    dialog_title="Wizard setup - <name>"
+    dialog_text="Enter the system's <name>.\n\nThis is the short name used by EmulationStation internally, as well as the text used in the EmulationStation UI unless replaced by an image or logo in the theme. It is advised to choose something short and descriptive (e.g. 'favourites', 'hacks').$previous_name"
     input="$(dialog \
                 --backtitle "$DIALOG_BACKTITLE" \
-                --title "Set name" \
+                --title "$dialog_title" \
                 --ok-label "Next" \
                 --cancel-label "Exit" \
-                --inputbox "Enter the system's name.\n\nThis is the short name used by EmulationStation internally, as well as the text used in the EmulationStation UI unless replaced by an image or logo in the theme. It is advised to choose something short and descriptive (e.g. 'favourites', 'hacks').$previous_name" \
+                --extra-button \
+                --extra-label "Back" \
+                --inputbox "$dialog_text" \
                 "$DIALOG_HEIGHT" "$DIALOG_WIDTH" 2>&1 >/dev/tty)"
-     local return_value="$?"
+    local return_value="$?"
 
     if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
         if [[ -n "$input" ]]; then
@@ -90,29 +131,35 @@ function dialog_choose_system_name() {
             dialog_choose_system_name
         fi
     elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
-        exit
+        exit 0
+    elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
+        dialog_main
     fi
 }
 
 
 function dialog_choose_system_fullname() {
-    local input
     local previous_fullname
+    local dialog_title
+    local dialog_text
+    local input
 
     if [[ -n "$SYSTEM_FULLNAME" ]]; then
-        previous_fullname="\n\nYou previously chose '$SYSTEM_FULLNAME' as the system's full name."
+        previous_fullname="\n\nYou previously chose '$SYSTEM_FULLNAME' as the system's <fullname>."
     fi
 
+    dialog_title="Wizard setup - <fullname>"
+    dialog_text="Enter the system's <fullname>.\n\nThis is the long name used in EmulationStation menus (e.g. 'My favourites games', 'Hacks and homebrew').$previous_fullname"
     input="$(dialog \
                 --backtitle "$DIALOG_BACKTITLE" \
-                --title "Set full name" \
+                --title "$dialog_title" \
                 --ok-label "Next" \
                 --cancel-label "Exit" \
                 --extra-button \
                 --extra-label "Back" \
-                --inputbox "Enter the system's full name.\n\nThis is the long name used in EmulationStation menus (e.g. 'My favourites games', 'Hacks and homebrew').$previous_fullname" \
+                --inputbox "$dialog_text" \
                 "$DIALOG_HEIGHT" "$DIALOG_WIDTH" 2>&1 >/dev/tty)"
-     local return_value="$?"
+    local return_value="$?"
 
     if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
         if [[ -n "$input" ]]; then
@@ -131,23 +178,27 @@ function dialog_choose_system_fullname() {
 }
 
 function dialog_choose_platform() {
-    local input
     local previous_platform
+    local dialog_title
+    local dialog_text
+    local input
 
     if [[ -n "$SYSTEM_PLATFORM" ]]; then
-        previous_platform="\n\nYou previously chose '$SYSTEM_PLATFORM' as the system's platform."
+        previous_platform="\n\nYou previously chose '$SYSTEM_PLATFORM' as the system's <platform>."
     fi
 
+    dialog_title="Wizard setup - <platform>"
+    dialog_text="Enter the system's <platform>.\n\nThis information is used for scraping.\nThis tag is optional so it may be best to omit it.\nIf you intend to use multiple emulators, for a favourites section for instance, then you can use existing gamelists to manually create a new gamelist.\nIf you are creating a section for mods or hacks, then it's unlikely you'll be able scrape metadata.$previous_platform"
     input="$(dialog \
                 --backtitle "$DIALOG_BACKTITLE" \
-                --title "Set platform" \
+                --title "$dialog_title" \
                 --ok-label "Next" \
                 --cancel-label "Exit" \
                 --extra-button \
                 --extra-label "Back" \
-                --inputbox "Enter the system's platform.\n\nThis information is used for scraping.\nThis tag is optional so it may be best to omit it.\nIf you intend to use multiple emulators, for a favourites section for instance, then you can use existing gamelists to manually create a new gamelist.\nIf you are creating a section for mods or hacks, then it's unlikely you'll be able scrape metadata.$previous_platform" \
+                --inputbox "$dialog_text" \
                 "$DIALOG_HEIGHT" "$DIALOG_WIDTH" 2>&1 >/dev/tty)"
-     local return_value="$?"
+    local return_value="$?"
 
     if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
         if [[ -n "$input" ]]; then
@@ -168,14 +219,15 @@ function dialog_choose_platform() {
 function dialog_choose_emulators() {
     local systems
     local system
-    local system_name_extensions=()
     local i=1
     local options=()
     local menu_items
+    local menu_title
     local menu_text
     local cmd
     local choices
     local choice
+    local system_name_extensions=()
 
     systems="$(get_all_systems)"
     IFS=" " read -r -a systems <<< "${systems[@]}"
@@ -185,10 +237,11 @@ function dialog_choose_emulators() {
     done
 
     menu_items="$(((${#options[@]} / 2)))"
-    menu_text="Select which systems to use in '$SYSTEM_FULLNAME'.\n4 systems maximum."
+    menu_title="Wizard setup - Choose systems"
+    menu_text="Choose which systems to use in '$SYSTEM_FULLNAME'.\n\n4 systems maximum."
     cmd=(dialog \
         --backtitle "$DIALOG_BACKTITLE" \
-        --title "Select systems" \
+        --title "$menu_title" \
         --ok-label "Next" \
         --cancel-label "Exit" \
         --extra-button \
@@ -216,7 +269,7 @@ function dialog_choose_emulators() {
                 dialog_create_new_system
             fi
         else
-            dialog_msgbox "Error!" "Select at least 1 choice."
+            dialog_msgbox "Error!" "Choose at least 1 choice."
             dialog_choose_emulators
         fi
     elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
@@ -231,6 +284,7 @@ function dialog_create_new_system() {
     local options=()
     local i=1
     local dialog_items
+    local dialog_title
     local dialog_text
     local cmd
     local form_values
@@ -248,11 +302,20 @@ function dialog_create_new_system() {
     done
 
     dialog_items="${#SYSTEM_FIELDS[@]}"
-    dialog_text="The new '$SYSTEM_FULLNAME' system is ready to be created!\n\nIf you want to edit a field, you can do so now.\nIf everything is correct, click 'Ok'.\n\nWARNING: If you edit 'Name', you'll have to edit 'Path', 'Command' and 'Theme' accordingly.\n\nFields marked with (*) are mandatory."
+    if [[ "$WIZARD_FLAG" -eq 1 ]]; then
+        dialog_title="Wizard setup - Create new system"
+    else
+        dialog_title="Create new system"
+    fi
+    if [[ "$WIZARD_FLAG" -eq 1 ]]; then
+        dialog_text="The new '$SYSTEM_FULLNAME' system is ready to be created!\n\nIf you want to edit a field, you can do so now.\nIf everything is correct, click 'OK'.\n\nWARNING: If you edit 'Name', you'll have to edit 'Path', 'Command' and 'Theme' accordingly.\n\nFields marked with (*) are mandatory."
+    else
+        dialog_text="Fields marked with (*) are mandatory."
+    fi
 
     cmd=(dialog \
         --backtitle "$DIALOG_BACKTITLE" \
-        --title "Create system" \
+        --title "$dialog_title" \
         --cancel-label "Exit" \
         --extra-button \
         --extra-label "Back" \
@@ -300,7 +363,13 @@ function dialog_create_new_system() {
             echo "No input!"
         fi
     elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
-        echo "exit"
+        exit 0
+    elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
+        if [[ "$WIZARD_FLAG" -eq 1 ]]; then
+            dialog_choose_platform
+        else
+            dialog_main
+        fi
     fi
 
 }
