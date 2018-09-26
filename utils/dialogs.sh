@@ -338,7 +338,7 @@ function dialog_create_new_system() {
             done <<< "$form_values"
             # Check if 'name, path, extension or command' are set.
             if ! grep -q -P '(?=.*?name)(?=.*?path)(?=.*?extension)(?=.*?command)^.*$' <<< "${NEW_SYSTEM_PROPERTIES[@]}"; then
-                dialog_msgbox "Error!" "ERROR: '$SYSTEM_FULLNAME' system is missing 'name', 'path', 'extension' or 'command'!"
+                dialog_msgbox "Error!" "System is missing 'name', 'path', 'extension' or 'command'!"
                 dialog_create_new_system
             fi
             local property
@@ -350,19 +350,18 @@ function dialog_create_new_system() {
                 # Re-check if 'name, path, extension or command' are set.
                 if [[ "$key" == "name" || "$key" == "path" || "$key" == "extension" || "$key" == "command" ]]; then
                     if [[ -z "$value" ]]; then
-                        dialog_msgbox "Error!" "ERROR: '$SYSTEM_FULLNAME' system is missing 'name', 'path', 'extension' or 'command'!"
+                        dialog_msgbox "Error!" "System is missing 'name', 'path', 'extension' or 'command'!"
                         dialog_create_new_system
                     fi
                 fi
-                echo "--------------------------"
-                echo "$key: $value"
+                # echo "--------------------------"
+                # echo "$key: $value"
             done
             create_new_system
-            create_system_emulators_cfg
-            add_emulators_to_system_emulators_cfg
             # IM_create_new_system_assets
         else
-            echo "No input!"
+            dialog_msgbox "Error!" "No input."
+            dialog_create_new_system
         fi
     elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
         exit 0

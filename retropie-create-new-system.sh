@@ -47,6 +47,14 @@ SYSTEM_COMMAND="/opt/retropie/supplementary/runcommand/runcommand.sh 0 _SYS_ $SY
 SYSTEM_PLATFORM=""
 SYSTEM_THEME="$SYSTEM_NAME"
 
+SYSTEM_NAME=""
+SYSTEM_FULLNAME=""
+SYSTEM_PATH=""
+SYSTEM_EXTENSION=""
+SYSTEM_COMMAND=""
+SYSTEM_PLATFORM=""
+SYSTEM_THEME=""
+
 SYSTEM_PROPERTIES=(
     "name $SYSTEM_NAME"
     "fullname $SYSTEM_FULLNAME"
@@ -226,7 +234,7 @@ function update_system() {
 
 
 function create_system_roms_dir() {
-    echo
+    # echo
     if [[ -z "$1" ]]; then
         echo "ERROR: '$FUNCNAME' needs a path as an argument!" >&2
         exit 1
@@ -314,6 +322,7 @@ function create_new_system() {
             esac
         done
     else
+        copy_es_systems_cfg
         # Create a new <system> called "newSystem"
         xmlstarlet ed -L -s "/systemList" -t elem -n "newSystem" -v "" "$USER_ES_SYSTEM_CFG"
         # Add subnodes to <newSystem>
@@ -334,12 +343,13 @@ function create_new_system() {
                 xmlstarlet ed -L -s "/systemList/newSystem" -t elem -n "$key" -v "$value" "$USER_ES_SYSTEM_CFG"
                 if [[ "$key" == "path" ]]; then
                     create_system_roms_dir "$value"
+                    create_system_emulators_cfg
                 fi
             fi
         done
         # Rename <newSystem> to <system>
         xmlstarlet ed -L -r "/systemList/newSystem" -v "system" "$USER_ES_SYSTEM_CFG"
-        echo
+        # echo
         echo "System '$SYSTEM_NAME' created successfully!"
     fi
     echo "> Done!"
@@ -359,6 +369,10 @@ function remove_system() {
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
+            # Remove system from '/opt/retropie/configs'
+            rm -rf "$RP_CONFIG_DIR/$system"
+            # Remove system from '/home/pi/RetroPie/roms'
+            rm -rf "$RP_ROMS_DIR/$system"
             echo "System '$system' removed successfully!"
         else
             echo "ERROR: Couldn't remove system '$system'."
@@ -372,7 +386,7 @@ function remove_system() {
 #~ xmlstarlet sel -t -v "/systemList/system[name='hh']" "$USER_ES_SYSTEM_CFG"
 #~ exit
 
-# remove_system "hh"
+# remove_system "hola"
 # exit
 
 
@@ -395,22 +409,24 @@ function create_system_emulators_cfg() {
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
             echo "'$RP_CONFIG_DIR/$SYSTEM_NAME' created successfully!"
+            echo "> Done!"
         else
             echo "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME'." >&2
         fi
-
+        echo "> Creating $RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg ..."
         touch "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
             echo "'$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' created successfully!"
+            echo "> Done!"
+            add_emulators_to_system_emulators_cfg
         else
             echo "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg'." >&2
         fi
     else
         echo "WHOOPS! '$RP_CONFIG_DIR/$SYSTEM_NAME' already exists."
     fi
-    echo "> Done!"
 }
 
 
