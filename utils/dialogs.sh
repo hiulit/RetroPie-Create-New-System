@@ -49,6 +49,8 @@ function dialog_yesno() {
 
 
 function dialog_main() {
+    WIZARD_FLAG=0
+
     local options=()
     local menu_items
     local menu_title
@@ -130,7 +132,7 @@ function dialog_choose_system_name() {
             dialog_msgbox "Error!" "Enter the system's name."
             dialog_choose_system_name
         fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
+    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_main
@@ -170,7 +172,7 @@ function dialog_choose_system_fullname() {
             dialog_msgbox "Error!" "Enter the system's full name."
             dialog_choose_system_fullname
         fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
+    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_system_name
@@ -208,7 +210,7 @@ function dialog_choose_platform() {
         fi
         SYSTEM_PROPERTIES[5]="platform $SYSTEM_PLATFORM"
         dialog_choose_emulators
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
+    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_system_fullname
@@ -272,7 +274,7 @@ function dialog_choose_emulators() {
             dialog_msgbox "Error!" "Choose at least 1 choice."
             dialog_choose_emulators
         fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
+    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_platform
@@ -310,7 +312,7 @@ function dialog_create_new_system() {
     if [[ "$WIZARD_FLAG" -eq 1 ]]; then
         dialog_text="The new '$SYSTEM_FULLNAME' system is ready to be created!\n\nIf you want to edit a field, you can do so now.\nIf everything is correct, click 'OK'.\n\nWARNING: If you edit 'Name', you'll have to edit 'Path', 'Command' and 'Theme' accordingly.\n\nFields marked with (*) are mandatory."
     else
-        dialog_text="Fields marked with (*) are mandatory."
+        dialog_text="Fields marked with (*) are mandatory.\n\nMore info at: https://github.com/RetroPie/RetroPie-Setup/wiki/Add-a-New-System-in-EmulationStation"
     fi
 
     cmd=(dialog \
@@ -362,7 +364,7 @@ function dialog_create_new_system() {
         else
             echo "No input!"
         fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL ]]; then
+    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         if [[ "$WIZARD_FLAG" -eq 1 ]]; then
