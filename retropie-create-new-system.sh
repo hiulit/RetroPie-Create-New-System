@@ -185,6 +185,7 @@ function get_console() {
     fi
 }
 
+
 function get_theme_xml() {
     echo "$ES_THEMES_DIR/$theme/$system/theme.xml"
 }
@@ -381,9 +382,6 @@ function remove_system() {
     echo "Done!"
 }
 
-#~ xmlstarlet sel -t -v "/systemList/system[name='hh']" "$USER_ES_SYSTEM_CFG"
-#~ exit
-
 # remove_system "hola"
 # exit
 
@@ -392,12 +390,6 @@ function remove_system() {
     #~ ln -s "$RP_ROMS_DIR/$system/$rom" "$RP_ROMS_DIR/$user_system/$rom"
 #~ }
 
-
-#~ function update_system_emulators_cfg() {
-
-#~ }
-
-
 function create_system_emulators_cfg() {
     echo "Creating '$RP_CONFIG_DIR/$SYSTEM_NAME' ..."
     if [[ ! -d "$RP_CONFIG_DIR/$SYSTEM_NAME" ]]; then
@@ -405,7 +397,6 @@ function create_system_emulators_cfg() {
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
-            # echo "'$RP_CONFIG_DIR/$SYSTEM_NAME' created successfully!"
             echo "Done!"
         else
             echo "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME'." >&2
@@ -415,7 +406,6 @@ function create_system_emulators_cfg() {
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
-            # echo "'$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' created successfully!"
             echo "Done!"
             add_emulators_to_system_emulators_cfg
         else
@@ -446,13 +436,6 @@ function add_emulators_to_system_emulators_cfg() {
     echo "$remove_duplicates" > "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
     echo "Done!"
 }
-
-
-# copy_es_systems_cfg
-# create_new_system
-# create_system_emulators_cfg
-# add_emulators_to_system_emulators_cfg
-# exit
 
 
 function get_options() {
@@ -506,14 +489,6 @@ function main() {
     # IM_create_new_system_assets
 
     get_options "$@"
-
-    # echo "$SYSTEM_NAME"
-    # echo "$SYSTEM_FULLNAME"
-    # echo "$SYSTEM_PATH"
-    # echo "$SYSTEM_EXTENSION"
-    # echo "$SYSTEM_COMMAND"
-    # echo "$SYSTEM_PLATFORM"
-    # echo "$SYSTEM_THEME"
 }
 
 main "$@"
