@@ -48,6 +48,44 @@ function dialog_yesno() {
 }
 
 
+# function dialog_main() {
+#     WIZARD_FLAG=0
+
+#     local options=()
+#     local menu_items
+#     local menu_title
+#     local menu_text
+#     local cmd
+#     local choice
+
+#     options=(
+#         1 "Create new system"
+#         2 "Update system"
+#         3 "Uninstall system"
+#     )
+#     menu_items="$(((${#options[@]} / 2)))"
+#     menu_title="$SCRIPT_TITLE"
+#     menu_text="Choose an option."
+#     cmd=(dialog \
+#         --backtitle "$DIALOG_BACKTITLE" \
+#         --title "$menu_title" \
+#         --cancel-label "Exit" \
+#         --menu "$menu_text" "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$menu_items")
+#     choice="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
+#     if [[ -n "$choice" ]]; then
+#         case "$choice" in
+#             1)
+#                 WIZARD_FLAG=1
+#                 dialog_choose_system_name
+#                 ;;
+#             2)
+#                 dialog_create_new_system
+#                 ;;
+#         esac
+#     fi
+# }
+
+
 function dialog_main() {
     WIZARD_FLAG=0
 

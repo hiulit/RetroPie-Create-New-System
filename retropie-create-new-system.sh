@@ -191,21 +191,15 @@ function get_theme_xml() {
 
 
 function copy_es_systems_cfg() {
-    echo
-    echo "> Copying '$ES_SYSTEMS_CFG' to '$USER_ES_SYSTEM_CFG' ..."
     if [[ ! -f "$USER_ES_SYSTEM_CFG" ]]; then
         cp "$ES_SYSTEMS_CFG" "$USER_ES_SYSTEM_CFG"
         local return_value
         return_value="$?"
-        if [[ "$return_value" -eq 0 ]]; then
-            echo "'$USER_ES_SYSTEM_CFG' copied successfully!"
-        else
+        if [[ "$return_value" -eq 1 ]]; then
             echo "ERROR: Couldn't copy '"$ES_SYSTEMS_CFG"'" >&2
+            exit 1
         fi
-    else
-        echo "WHOOPS! '$USER_ES_SYSTEM_CFG' already exists."
     fi
-    echo "> Done!"
 }
 
 
@@ -234,27 +228,24 @@ function update_system() {
 
 
 function create_system_roms_dir() {
-    # echo
     if [[ -z "$1" ]]; then
         echo "ERROR: '$FUNCNAME' needs a path as an argument!" >&2
         exit 1
     fi
     local path="$1"
-    echo "> Creating '$path' ..."
+    echo "Creating '$path' ..."
     if [[ ! -d "$path" ]]; then
         mkdir -p "$value"
         chown -R "$user":"$user" "$value"
         local return_value
         return_value="$?"
-        if [[ "$return_value" -eq 0 ]]; then
-            echo "'$path' created successfully!"
-        else
+        if [[ "$return_value" -eq 1 ]]; then
             echo "ERROR: Couldn't create '$path'." >&2
         fi
     else
         echo "WHOOPS! '$path' already exists."
     fi
-    echo "> Done!"
+    echo "Done!"
 }
 
 
@@ -270,7 +261,8 @@ function system_exists() {
 
 function create_new_system() {
     echo
-    echo "> Creating system '$SYSTEM_NAME' ..."
+    echo "Creating system '$SYSTEM_NAME' ..."
+    echo
     # Check if <system> exists
     if system_exists "$SYSTEM_NAME"; then
         echo "System '$SYSTEM_NAME' already exists in '$USER_ES_SYSTEM_CFG'."
@@ -322,19 +314,21 @@ function create_new_system() {
             esac
         done
     else
+        # Create a copy of 'es_system_cfg' if it doesn't exists already.
         copy_es_systems_cfg
-        # Create a new <system> called "newSystem"
+        # Create a new <system> called 'newSystem'.
         xmlstarlet ed -L -s "/systemList" -t elem -n "newSystem" -v "" "$USER_ES_SYSTEM_CFG"
-        # Add subnodes to <newSystem>
+        # Add subnodes to <newSystem>.
         for system_property in "${NEW_SYSTEM_PROPERTIES[@]}"; do
             local key
             local value
             key="$(echo $system_property | grep  -Eo "^[^ ]+")"
             value="$(echo $system_property | grep -Po "(?<= ).*")"
-            # Check for missing name, path, extension or command.
+            # Check for missing 'name', 'path', 'extension' or 'command'.
             if [[ "$key" == "name" || "$key" == "path" || "$key" == "extension" || "$key" == "command"  ]]; then
                 if [[ -z "$key" ]]; then
                     echo "ERROR: System '$SYSTEM_NAME' is missing 'name', 'path', 'extension' or 'command'!" >&2
+                    # Remove <newSystem>.
                     xmlstarlet ed -L -d "/systemList/newSystem"  "$USER_ES_SYSTEM_CFG"
                     exit 1
                 fi
@@ -342,27 +336,31 @@ function create_new_system() {
             if [[ -n "$value" ]]; then
                 xmlstarlet ed -L -s "/systemList/newSystem" -t elem -n "$key" -v "$value" "$USER_ES_SYSTEM_CFG"
                 if [[ "$key" == "path" ]]; then
+                    # Create the ROM folder for the new system.
                     create_system_roms_dir "$value"
+                    # Create the emulators config file for the new system.
                     create_system_emulators_cfg
                 fi
             fi
         done
+        # Add special tag so we can know it's a system created with this script.
+        xmlstarlet ed -L -s "/systemList/newSystem" -t elem -n "createdwith" -v "$SCRIPT_NAME" "$USER_ES_SYSTEM_CFG"
         # Rename <newSystem> to <system>
         xmlstarlet ed -L -r "/systemList/newSystem" -v "system" "$USER_ES_SYSTEM_CFG"
-        # echo
+        echo
         echo "System '$SYSTEM_NAME' created successfully!"
     fi
-    echo "> Done!"
+    echo
+    echo "All Done!"
 }
 
 function remove_system() {
-    echo
     if [[ -z "$1" ]]; then
         echo "ERROR: '$FUNCNAME' needs a system as an argument!" >&2
         exit 1
     fi
     local system="$1"
-    echo "> Removing '$system' ..."
+    echo "Removing '$system' system ..."
     # Remove system from 'es_system.cfg'
     if xmlstarlet sel -t -v "/systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null; then
         xmlstarlet ed -L -d "//system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null
@@ -373,14 +371,14 @@ function remove_system() {
             rm -rf "$RP_CONFIG_DIR/$system"
             # Remove system from '/home/pi/RetroPie/roms'
             rm -rf "$RP_ROMS_DIR/$system"
-            echo "System '$system' removed successfully!"
+            # echo "System '$system' removed successfully!"
         else
             echo "ERROR: Couldn't remove system '$system'."
         fi
     else
         echo "ERROR: Couldn't remove system '$system'. It doesn't exist!" >&2
     fi
-    echo "> Done!"
+    echo "Done!"
 }
 
 #~ xmlstarlet sel -t -v "/systemList/system[name='hh']" "$USER_ES_SYSTEM_CFG"
@@ -401,25 +399,24 @@ function remove_system() {
 
 
 function create_system_emulators_cfg() {
-    echo
-    echo "> Creating '$RP_CONFIG_DIR/$SYSTEM_NAME' ..."
+    echo "Creating '$RP_CONFIG_DIR/$SYSTEM_NAME' ..."
     if [[ ! -d "$RP_CONFIG_DIR/$SYSTEM_NAME" ]]; then
         mkdir -p "$RP_CONFIG_DIR/$SYSTEM_NAME"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
-            echo "'$RP_CONFIG_DIR/$SYSTEM_NAME' created successfully!"
-            echo "> Done!"
+            # echo "'$RP_CONFIG_DIR/$SYSTEM_NAME' created successfully!"
+            echo "Done!"
         else
             echo "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME'." >&2
         fi
-        echo "> Creating $RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg ..."
+        echo "Creating $RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg ..."
         touch "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
-            echo "'$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' created successfully!"
-            echo "> Done!"
+            # echo "'$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' created successfully!"
+            echo "Done!"
             add_emulators_to_system_emulators_cfg
         else
             echo "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg'." >&2
@@ -431,16 +428,13 @@ function create_system_emulators_cfg() {
 
 
 function add_emulators_to_system_emulators_cfg() {
-    echo
-    echo "> Adding emulators to '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' ..."
-    for emulator in "${EMULATORS[@]}"; do
-        echo "> Adding '$emulator' ..."
+    echo "Adding emulators to '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' ..."
+    for emulator in "${NEW_EMULATORS[@]}"; do
+        echo "Adding '$emulator' ..."
         cat "$RP_CONFIG_DIR/$emulator/emulators.cfg" >> "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
         local return_value
         return_value="$?"
-        if [[ "$return_value" -eq 0 ]]; then
-            echo "'$emulator' added successfully!"
-        else
+        if [[ "$return_value" -eq 1 ]]; then
             echo "ERROR: Couldn't add '$emulator'." >&2
         fi
         # Remove 'default' emulators
@@ -450,7 +444,7 @@ function add_emulators_to_system_emulators_cfg() {
     local remove_duplicates
     remove_duplicates="$(awk '!a[$0]++' "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg")"
     echo "$remove_duplicates" > "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
-    echo "> Done!"
+    echo "Done!"
 }
 
 
