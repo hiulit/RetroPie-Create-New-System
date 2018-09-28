@@ -396,6 +396,7 @@ function dialog_create_new_system() {
             create_new_system
             IM_create_new_system_theme
             dialog_msgbox "Success!" "System '$SYSTEM_NAME' has been created successfully!"
+            # TODO Check if there are any games before asking
             dialog_yesno "Add games" "Would you like to add some games to '$SYSTEM_NAME'?" && dialog_choose_games
         else
             dialog_msgbox "Error!" "No input."
@@ -469,6 +470,7 @@ function dialog_choose_games() {
                 create_symbolic_link "$RP_ROMS_DIR/$emulator/$rom" "$RP_ROMS_DIR/$SYSTEM_NAME/$rom"
             done
         else
+            echo "CHoose a game!"
             exit 0
         fi
     elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
