@@ -458,14 +458,14 @@ function get_options() {
         exit 0
     else
         case "$1" in
-#H -h, --help                   Print the help message and exit.
+#H -h, --help                   Show help message.
             -h|--help)
                 echo
                 underline "$SCRIPT_TITLE"
                 echo "$SCRIPT_DESCRIPTION"
                 echo
                 echo
-                echo "USAGE: $0 [OPTIONS]"
+                echo "USAGE: sudo $0 [OPTIONS]"
                 echo
                 echo "OPTIONS:"
                 echo

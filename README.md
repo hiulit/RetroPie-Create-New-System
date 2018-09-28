@@ -35,7 +35,7 @@ Use '--help' to see all the options.
 
 ### `--help`
 
-Print the help message and exit.
+Show help message.
 
 #### Example
 

@@ -83,9 +83,9 @@ function usage() {
     echo "$SCRIPT_DESCRIPTION"
     echo
     echo
-    echo "USAGE: $0 [OPTIONS]"
+    echo "USAGE: sudo $0 [OPTIONS]"
     echo
-    echo "Use '$0 --help' to see all the options."
+    echo "Use 'sudo $0 --help' to see all the options."
     echo
     exit 0
 }
