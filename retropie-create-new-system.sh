@@ -47,13 +47,13 @@ SYSTEM_COMMAND="/opt/retropie/supplementary/runcommand/runcommand.sh 0 _SYS_ $SY
 SYSTEM_PLATFORM=""
 SYSTEM_THEME="$SYSTEM_NAME"
 
-SYSTEM_NAME=""
-SYSTEM_FULLNAME=""
-SYSTEM_PATH=""
-SYSTEM_EXTENSION=""
-SYSTEM_COMMAND=""
-SYSTEM_PLATFORM=""
-SYSTEM_THEME=""
+# SYSTEM_NAME=""
+# SYSTEM_FULLNAME=""
+# SYSTEM_PATH=""
+# SYSTEM_EXTENSION=""
+# SYSTEM_COMMAND=""
+# SYSTEM_PLATFORM=""
+# SYSTEM_THEME=""
 
 SYSTEM_PROPERTIES=(
     "name $SYSTEM_NAME"
@@ -382,13 +382,6 @@ function remove_system() {
     echo "Done!"
 }
 
-# remove_system "hola"
-# exit
-
-
-#~ function create_symbolic_link() {
-    #~ ln -s "$RP_ROMS_DIR/$system/$rom" "$RP_ROMS_DIR/$user_system/$rom"
-#~ }
 
 function create_system_emulators_cfg() {
     echo "Creating '$RP_CONFIG_DIR/$SYSTEM_NAME' ..."
@@ -477,6 +470,14 @@ function get_options() {
     fi
 }
 
+# remove_system "hola"
+# exit
+
+
+function create_symbolic_link() {
+    ln -s "$RP_ROMS_DIR/$system/$rom" "$RP_ROMS_DIR/$user_system/$rom"
+}
+
 
 function main() {
     if ! is_retropie; then
@@ -486,9 +487,9 @@ function main() {
 
     check_dependencies
 
-    # IM_create_new_system_assets
-
     get_options "$@"
 }
 
-main "$@"
+# main "$@"
+
+dialog_choose_games

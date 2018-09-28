@@ -31,7 +31,7 @@ function IM_create_new_system_assets() {
         exit
     fi
 
-    if [[ "${#EMULATORS[@]}" -gt 4 ]]; then
+    if [[ "${#NEW_EMULATORS[@]}" -gt 4 ]]; then
         echo "ERROR: Maximum number of emulators is 4."
         exit
     fi
@@ -39,8 +39,8 @@ function IM_create_new_system_assets() {
     image_h=500
     image_w=500
     system_text="A cande more nauer"
-    system_logo_text="New system"
-    user_system_name="hh"
+    system_logo_text="$SYSTEM_FULLNAME"
+    user_system_name="$SYSTEM_NAME"
 
     user_console="$ES_THEMES_DIR/$theme/$user_system_name/$(basename "$system_console")"
     user_logo="$ES_THEMES_DIR/$theme/$user_system_name/$(basename "$system_logo")"
@@ -83,7 +83,7 @@ function IM_create_new_system_assets() {
 
     local emulator
     local i=1
-    for emulator in "${EMULATORS[@]}"; do
+    for emulator in "${NEW_EMULATORS[@]}"; do
         local geometry
         local gravity
         local image_h_per
@@ -101,7 +101,7 @@ function IM_create_new_system_assets() {
         tmp_system_image="$ES_THEMES_DIR/$theme/$user_system_name/tmp-$system.$extension"
 
 
-        if [[ "${#EMULATORS[@]}" -eq 2 ]]; then
+        if [[ "${#NEW_EMULATORS[@]}" -eq 2 ]]; then
             geometry="+$(((image_w*5/100)))+0"
             image_w_per=50
             image_h_per=50
@@ -111,7 +111,7 @@ function IM_create_new_system_assets() {
                 gravity="east"
             fi
         fi
-        if [[ "${#EMULATORS[@]}" -eq 3 ]]; then
+        if [[ "${#NEW_EMULATORS[@]}" -eq 3 ]]; then
             image_w_per=50
             image_h_per=50
             if [[ "$i" -eq 1 ]]; then
@@ -123,7 +123,7 @@ function IM_create_new_system_assets() {
                 geometry="+$(((image_w*5/100)))+$(((image_h*25/100)))"
             fi
         fi
-        if [[ "${#EMULATORS[@]}" -eq 4 ]]; then
+        if [[ "${#NEW_EMULATORS[@]}" -eq 4 ]]; then
             image_w_per=50
             image_h_per=50
             if [[ "$i" -eq 1 ]]; then

@@ -396,7 +396,7 @@ function dialog_create_new_system() {
                 # echo "$key: $value"
             done
             create_new_system
-            # IM_create_new_system_assets
+            IM_create_new_system_assets
         else
             dialog_msgbox "Error!" "No input."
             dialog_create_new_system
@@ -409,6 +409,75 @@ function dialog_create_new_system() {
         else
             dialog_main
         fi
+    fi
+
+}
+
+
+function dialog_choose_games() {
+    local options=()
+    local emulator
+    local i=1
+    local dialog_items
+    local dialog_title
+    local dialog_text
+    local cmd
+    local choices
+    local choice
+
+    for emulator in "${EMULATORS[@]}"; do
+        # Check if folder is not empty.
+        if [[ "$(ls -A "$RP_ROMS_DIR/$emulator")" ]]; then
+            local rom
+            for rom in "$RP_ROMS_DIR/$emulator/"*; do
+                local extension
+                extension="${rom##*.}"
+                # Add roms that match the extension
+                if grep -q -P "(?=.*?$extension)^.*$" <<< "${SYSTEM_PROPERTIES[3]}"; then
+                    options+=("$i" "$emulator - $(basename "$rom")" off)
+                    ((i++))
+                fi
+            done
+        fi
+    done
+
+    dialog_items="${#options[@]}"
+    dialog_title="Wizard setup - Choose ROMS"
+    dialog_text="Choose which ROMS to use in '$SYSTEM_FULLNAME'."
+    cmd=(dialog \
+        --backtitle "$DIALOG_BACKTITLE" \
+        --title "$dialog_title" \
+        --ok-label "Next" \
+        --cancel-label "Exit" \
+        --extra-button \
+        --extra-label "Back" \
+        --checklist "$dialog_text" \
+        "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$dialog_items")
+
+    choices="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
+    local return_value="$?"
+
+    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+        if [[ -n "$choices" ]]; then
+            IFS=" " read -r -a choices <<< "${choices[@]}"
+            local choice
+            for choice in "${choices[@]}"; do
+                local emulator
+                local rom
+                emulator="$(echo ${options[choice*3-2]} | cut -d' -' -f1)"
+                rom="${options[choice*3-2]#* - }"
+                echo "$emulator"
+                echo "$rom"
+                echo "$RP_ROMS_DIR/$emulator/$rom"
+                # create_symbolic_link "$rom"
+            done
+        else
+            exit 0
+        fi
+    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
+        exit 0
+    elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
+        dialog_choose_platform
     fi
 
 }
