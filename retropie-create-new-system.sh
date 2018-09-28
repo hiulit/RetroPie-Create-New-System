@@ -36,6 +36,9 @@ readonly SCRIPT_DESCRIPTION="A tool for RetroPie to create a new system for Emul
 
 readonly DEPENDENCIES=("imagemagick" "librsvg2-bin")
 
+readonly LOG_DIR="$SCRIPT_DIR/logs"
+readonly LOG_FILE="$LOG_DIR/$(date +%F-%T).log"
+
 
 # Variables ##################################################################
 
@@ -47,13 +50,13 @@ SYSTEM_COMMAND="/opt/retropie/supplementary/runcommand/runcommand.sh 0 _SYS_ $SY
 SYSTEM_PLATFORM=""
 SYSTEM_THEME="$SYSTEM_NAME"
 
-# SYSTEM_NAME=""
-# SYSTEM_FULLNAME=""
-# SYSTEM_PATH=""
-# SYSTEM_EXTENSION=""
-# SYSTEM_COMMAND=""
-# SYSTEM_PLATFORM=""
-# SYSTEM_THEME=""
+SYSTEM_NAME=""
+SYSTEM_FULLNAME=""
+SYSTEM_PATH=""
+SYSTEM_EXTENSION=""
+SYSTEM_COMMAND=""
+SYSTEM_PLATFORM=""
+SYSTEM_THEME=""
 
 SYSTEM_PROPERTIES=(
     "name $SYSTEM_NAME"
@@ -89,6 +92,7 @@ DEFAULT_THEME="carbon"
 
 ## Flags
 
+GUI_FLAG=0
 WIZARD_FLAG=0
 
 
@@ -234,19 +238,19 @@ function create_system_roms_dir() {
         exit 1
     fi
     local path="$1"
-    echo "Creating '$path' ..."
+    log "Creating '$path' ..."
     if [[ ! -d "$path" ]]; then
         mkdir -p "$value"
         chown -R "$user":"$user" "$value"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 1 ]]; then
-            echo "ERROR: Couldn't create '$path'." >&2
+            log "ERROR: Couldn't create '$path'." >&2
         fi
     else
-        echo "WHOOPS! '$path' already exists."
+        log "WHOOPS! '$path' already exists."
     fi
-    echo "Done!"
+    log "Done!"
 }
 
 
@@ -261,9 +265,9 @@ function system_exists() {
 
 
 function create_new_system() {
-    echo
-    echo "Creating system '$SYSTEM_NAME' ..."
-    echo
+    log
+    log "Creating system '$SYSTEM_NAME' ..."
+    log
     # Check if <system> exists
     if system_exists "$SYSTEM_NAME"; then
         echo "System '$SYSTEM_NAME' already exists in '$USER_ES_SYSTEM_CFG'."
@@ -348,12 +352,13 @@ function create_new_system() {
         xmlstarlet ed -L -s "/systemList/newSystem" -t elem -n "createdwith" -v "$SCRIPT_NAME" "$USER_ES_SYSTEM_CFG"
         # Rename <newSystem> to <system>
         xmlstarlet ed -L -r "/systemList/newSystem" -v "system" "$USER_ES_SYSTEM_CFG"
-        echo
-        echo "System '$SYSTEM_NAME' created successfully!"
+        log
+        log "System '$SYSTEM_NAME' created successfully!"
     fi
-    echo
-    echo "All Done!"
+    log
+    log "All Done!"
 }
+
 
 function remove_system() {
     if [[ -z "$1" ]]; then
@@ -361,6 +366,8 @@ function remove_system() {
         exit 1
     fi
     local system="$1"
+    local theme
+    theme="$(get_current_theme)"
     echo "Removing '$system' system ..."
     # Remove system from 'es_system.cfg'
     if xmlstarlet sel -t -v "/systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null; then
@@ -372,7 +379,8 @@ function remove_system() {
             rm -rf "$RP_CONFIG_DIR/$system"
             # Remove system from '/home/pi/RetroPie/roms'
             rm -rf "$RP_ROMS_DIR/$system"
-            # echo "System '$system' removed successfully!"
+            # Remove system from theme
+            rm -rf "$ES_THEMES_DIR/$theme/$system"
         else
             echo "ERROR: Couldn't remove system '$system'."
         fi
@@ -384,41 +392,41 @@ function remove_system() {
 
 
 function create_system_emulators_cfg() {
-    echo "Creating '$RP_CONFIG_DIR/$SYSTEM_NAME' ..."
+    log "Creating '$RP_CONFIG_DIR/$SYSTEM_NAME' ..."
     if [[ ! -d "$RP_CONFIG_DIR/$SYSTEM_NAME" ]]; then
         mkdir -p "$RP_CONFIG_DIR/$SYSTEM_NAME"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
-            echo "Done!"
+            log "Done!"
         else
-            echo "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME'." >&2
+            log "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME'." >&2
         fi
-        echo "Creating $RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg ..."
-        touch "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
+        log "Creating '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' ..."
+        touch "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg" && chown -R "$user":"$user" "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
-            echo "Done!"
+            log "Done!"
             add_emulators_to_system_emulators_cfg
         else
-            echo "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg'." >&2
+            log "ERROR: Couldn't create '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg'." >&2
         fi
     else
-        echo "WHOOPS! '$RP_CONFIG_DIR/$SYSTEM_NAME' already exists."
+        log "WHOOPS! '$RP_CONFIG_DIR/$SYSTEM_NAME' already exists."
     fi
 }
 
 
 function add_emulators_to_system_emulators_cfg() {
-    echo "Adding emulators to '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' ..."
+    log "Adding emulators to '$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg' ..."
     for emulator in "${NEW_EMULATORS[@]}"; do
-        echo "Adding '$emulator' ..."
+        log "Adding '$emulator' ..."
         cat "$RP_CONFIG_DIR/$emulator/emulators.cfg" >> "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 1 ]]; then
-            echo "ERROR: Couldn't add '$emulator'." >&2
+            log "ERROR: Couldn't add '$emulator'." >&2
         fi
         # Remove 'default' emulators
         sed -i '/default/d' "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
@@ -427,7 +435,20 @@ function add_emulators_to_system_emulators_cfg() {
     local remove_duplicates
     remove_duplicates="$(awk '!a[$0]++' "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg")"
     echo "$remove_duplicates" > "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
-    echo "Done!"
+    log "Done!"
+}
+
+
+function create_symbolic_link() {
+    if [[ -z "$2" ]]; then
+        echo "ERROR: '$FUNCNAME' needs a destination as a a second argument!" >&2
+        exit 1
+    fi
+    local from
+    local to
+    from="$1"
+    to="$2"
+    ln -s "$from" "$to"
 }
 
 
@@ -454,6 +475,9 @@ function get_options() {
                 ;;
 #H -g, --gui                    Start the GUI.
             -g|--gui)
+                GUI_FLAG=1
+                mkdir -p "$LOG_DIR" && chown -R "$user":"$user" "$LOG_FILE"
+                touch "$LOG_FILE" && chown -R "$user":"$user" "$LOG_FILE"
                 dialog_main
                 ;;
 #H -v, --version                Show script version.
@@ -470,13 +494,9 @@ function get_options() {
     fi
 }
 
+
 # remove_system "hola"
 # exit
-
-
-function create_symbolic_link() {
-    ln -s "$RP_ROMS_DIR/$system/$rom" "$RP_ROMS_DIR/$user_system/$rom"
-}
 
 
 function main() {
@@ -490,6 +510,6 @@ function main() {
     get_options "$@"
 }
 
-# main "$@"
+main "$@"
 
-dialog_choose_games
+# dialog_choose_games
