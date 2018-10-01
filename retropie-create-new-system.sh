@@ -233,8 +233,7 @@ function create_system_roms_dir() {
     local path="$1"
     log "Creating '$path' ..."
     if [[ ! -d "$path" ]]; then
-        mkdir -p "$value"
-        chown -R "$user":"$user" "$value"
+        mkdir -p "$value" && chown -R "$user":"$user" "$value"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 1 ]]; then
@@ -390,7 +389,7 @@ function remove_system() {
 function create_system_emulators_cfg() {
     log "Creating '$RP_CONFIG_DIR/$SYSTEM_NAME' ..."
     if [[ ! -d "$RP_CONFIG_DIR/$SYSTEM_NAME" ]]; then
-        mkdir -p "$RP_CONFIG_DIR/$SYSTEM_NAME"
+        mkdir -p "$RP_CONFIG_DIR/$SYSTEM_NAME" && chown -R "$user":"$user" "$RP_CONFIG_DIR/$SYSTEM_NAME"
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
@@ -472,7 +471,7 @@ function get_options() {
 #H -g, --gui                    Start the GUI.
             -g|--gui)
                 GUI_FLAG=1
-                mkdir -p "$LOG_DIR" && chown -R "$user":"$user" "$LOG_FILE"
+                mkdir -p "$LOG_DIR" && chown -R "$user":"$user" "$LOG_DIR"
                 touch "$LOG_FILE" && chown -R "$user":"$user" "$LOG_FILE"
                 dialog_main
                 ;;
