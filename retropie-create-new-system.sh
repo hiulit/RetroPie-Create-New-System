@@ -68,13 +68,6 @@ SYSTEM_PROPERTIES=(
     "theme $SYSTEM_THEME"
 )
 
-EMULATORS=(
-    "nes"
-    "gba"
-    "snes"
-    "gbc"
-)
-
 SYSTEM_FIELDS=(
     "name"
     "fullname"
@@ -354,6 +347,9 @@ function create_new_system() {
         xmlstarlet ed -L -r "/systemList/newSystem" -v "system" "$USER_ES_SYSTEM_CFG"
         log
         log "System '$SYSTEM_NAME' created successfully!"
+        local theme
+        theme="$(get_current_theme)"
+        [[ "$theme" == "pixel" ]] && IM_create_new_system_theme
     fi
     log
     log "All Done!"
@@ -511,5 +507,3 @@ function main() {
 }
 
 main "$@"
-
-# dialog_choose_games

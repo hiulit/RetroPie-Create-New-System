@@ -401,7 +401,6 @@ function dialog_create_new_system() {
                 fi
             done
             create_new_system
-            IM_create_new_system_theme
             dialog_msgbox "Success!" "System '$SYSTEM_NAME' has been created successfully!"
             # TODO Check if there are any games before asking
             dialog_yesno "Add games" "Would you like to add some games to '$SYSTEM_NAME'?" && dialog_choose_games
