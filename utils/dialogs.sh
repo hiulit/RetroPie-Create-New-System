@@ -119,6 +119,9 @@ function dialog_main() {
                 dialog_create_new_system
                 ;;
         esac
+    else
+        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        exit 0
     fi
 }
 
@@ -170,7 +173,8 @@ function dialog_choose_system_name() {
             dialog_msgbox "Error!" "Enter the system's name."
             dialog_choose_system_name
         fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
+        log "Script stopped at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_main
@@ -210,7 +214,8 @@ function dialog_choose_system_fullname() {
             dialog_msgbox "Error!" "Enter the system's full name."
             dialog_choose_system_fullname
         fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
+        log "Script stopped at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_system_name
@@ -248,7 +253,8 @@ function dialog_choose_platform() {
         fi
         SYSTEM_PROPERTIES[5]="platform $SYSTEM_PLATFORM"
         dialog_choose_emulators
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
+        log "Script stopped at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_system_fullname
@@ -312,7 +318,8 @@ function dialog_choose_emulators() {
             dialog_msgbox "Error!" "Choose at least 1 choice."
             dialog_choose_emulators
         fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
+        log "Script stopped at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_platform
@@ -402,7 +409,8 @@ function dialog_create_new_system() {
             dialog_msgbox "Error!" "No input."
             dialog_create_new_system
         fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
+        log "Script stopped at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         if [[ "$WIZARD_FLAG" -eq 1 ]]; then
@@ -470,10 +478,11 @@ function dialog_choose_games() {
                 create_symbolic_link "$RP_ROMS_DIR/$emulator/$rom" "$RP_ROMS_DIR/$SYSTEM_NAME/$rom"
             done
         else
-            echo "CHoose a game!"
+            echo "Choose a game!"
             exit 0
         fi
-    elif [[ "$return_value" -eq ""$DIALOG_CANCEL || "$return_value" -eq ""$DIALOG_ESC ]]; then
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
+        log "Script stopped at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_platform
