@@ -59,8 +59,9 @@ function restart_ES() {
 function log() {
     if [[ "$GUI_FLAG" -eq 1 ]]; then
         echo "$*" >> "$LOG_FILE"
+    else
+        echo "$*"
     fi
-    echo "$*"
 }
 
 
@@ -129,4 +130,12 @@ function has_space {
         exit 1
     fi
     [[ "$1" != "${1%[[:space:]]*}" ]] && return 0 || return 1
+}
+
+
+function join_by() {
+    #Usage example: join_by , a b c
+    local IFS="$1"
+    shift
+    echo "$*"
 }

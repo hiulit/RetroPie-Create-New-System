@@ -108,6 +108,28 @@ function get_all_systems() {
 }
 
 
+function get_games() {
+    local games=()
+    local emulator
+
+    for emulator in "${NEW_EMULATORS[@]}"; do
+        # Check if folder is not empty.
+        if [[ "$(ls -A "$RP_ROMS_DIR/$emulator")" ]]; then
+            local rom
+            for rom in "$RP_ROMS_DIR/$emulator/"*; do
+                local extension
+                extension="${rom##*.}"
+                # Add roms that match the extension
+                if grep -q -P "(?=.*?$extension)^.*$" <<< "${NEW_SYSTEM_PROPERTIES[3]}"; then
+                    games+=("$(basename "$rom")")
+                fi
+            done
+        fi
+    done
+    echo "${games[@]}"
+}
+
+
 function get_current_theme() {
     if [[ ! -f "$ES_SETTINGS_CFG" ]]; then
         echo "$DEFAULT_THEME"
@@ -188,6 +210,26 @@ function get_theme_xml() {
 }
 
 
+function system_exists() {
+    if [[ -z "$1" ]]; then
+        echo "ERROR: '$FUNCNAME' needs a string as an argument!" >&2
+        exit 1
+    fi
+    local system="$1"
+    xmlstarlet sel -t -v "/systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null
+}
+
+
+function get_installed_systems() {
+    local installed_systems=()
+    local system_name
+    while read -r system_name; do
+        installed_systems+=("$system_name")
+    done < <(xmlstarlet sel -t -m "/systemList/system[createdwith='$SCRIPT_NAME']" -v name -n "$USER_ES_SYSTEM_CFG" 2> /dev/null)
+    echo "${installed_systems[@]}"
+}
+
+
 function copy_es_systems_cfg() {
     if [[ ! -f "$USER_ES_SYSTEM_CFG" ]]; then
         cp "$ES_SYSTEMS_CFG" "$USER_ES_SYSTEM_CFG"
@@ -243,16 +285,6 @@ function create_system_roms_dir() {
         log "WHOOPS! '$path' already exists."
     fi
     log "Done!"
-}
-
-
-function system_exists() {
-    if [[ -z "$1" ]]; then
-        echo "ERROR: '$FUNCNAME' needs a string as an argument!" >&2
-        exit 1
-    fi
-    local system="$1"
-    xmlstarlet sel -t -v "/systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null
 }
 
 
@@ -346,9 +378,9 @@ function create_new_system() {
         xmlstarlet ed -L -r "/systemList/newSystem" -v "system" "$USER_ES_SYSTEM_CFG"
         log
         log "System '$SYSTEM_NAME' created successfully!"
-        local theme
-        theme="$(get_current_theme)"
-        [[ "$theme" == "pixel" ]] && IM_create_new_system_theme
+        # local theme
+        # theme="$(get_current_theme)"
+        # [[ "$theme" == "pixel" ]] && IM_create_new_system_theme
     fi
     log
     log "All Done!"
@@ -363,7 +395,7 @@ function remove_system() {
     local system="$1"
     local theme
     theme="$(get_current_theme)"
-    echo "Removing '$system' system ..."
+    log "Removing '$system' system ..."
     # Remove system from 'es_system.cfg'
     if xmlstarlet sel -t -v "/systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null; then
         xmlstarlet ed -L -d "//system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null
@@ -376,13 +408,14 @@ function remove_system() {
             rm -rf "$RP_ROMS_DIR/$system"
             # Remove system from theme
             rm -rf "$ES_THEMES_DIR/$theme/$system"
+
+            log "'$system' removed successfully!"
         else
-            echo "ERROR: Couldn't remove system '$system'."
+            log "ERROR: Couldn't remove system '$system'."
         fi
     else
-        echo "ERROR: Couldn't remove system '$system'. It doesn't exist!" >&2
+        log "ERROR: Couldn't remove system '$system'. It doesn't exist!" >&2
     fi
-    echo "Done!"
 }
 
 

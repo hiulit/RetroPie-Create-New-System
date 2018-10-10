@@ -48,45 +48,52 @@ function dialog_yesno() {
 }
 
 
-# function dialog_main() {
-#     WIZARD_FLAG=0
-
-#     local options=()
-#     local menu_items
-#     local menu_title
-#     local menu_text
-#     local cmd
-#     local choice
-
-#     options=(
-#         1 "Create new system"
-#         2 "Update system"
-#         3 "Uninstall system"
-#     )
-#     menu_items="$(((${#options[@]} / 2)))"
-#     menu_title="$SCRIPT_TITLE"
-#     menu_text="Choose an option."
-#     cmd=(dialog \
-#         --backtitle "$DIALOG_BACKTITLE" \
-#         --title "$menu_title" \
-#         --cancel-label "Exit" \
-#         --menu "$menu_text" "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$menu_items")
-#     choice="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
-#     if [[ -n "$choice" ]]; then
-#         case "$choice" in
-#             1)
-#                 WIZARD_FLAG=1
-#                 dialog_choose_system_name
-#                 ;;
-#             2)
-#                 dialog_create_new_system
-#                 ;;
-#         esac
-#     fi
-# }
-
-
 function dialog_main() {
+    local options=()
+    local menu_items
+    local menu_title
+    local menu_text
+    local cmd
+    local choice
+
+    options=(
+        1 "Create new system"
+    )
+    if [[ -n "$(get_installed_systems 2> /dev/null)" ]]; then
+        options+=(
+            2 "Update system"
+            3 "Uninstall system"
+        )
+    fi
+    menu_items="$(((${#options[@]} / 2)))"
+    menu_title="$SCRIPT_TITLE"
+    menu_text="Choose an option."
+    cmd=(dialog \
+        --backtitle "$DIALOG_BACKTITLE" \
+        --title "$menu_title" \
+        --cancel-label "Exit" \
+        --menu "$menu_text" "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$menu_items")
+    choice="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
+    if [[ -n "$choice" ]]; then
+        case "$choice" in
+            1)
+                dialog_choose_create_new_system
+                ;;
+            2)
+                dialog_choose_update_system
+                ;;
+            3)
+                dialog_choose_uninstall_system
+                ;;
+        esac
+    else
+        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        exit 0
+    fi
+}
+
+
+function dialog_choose_create_new_system() {
     WIZARD_FLAG=0
 
     local options=()
@@ -101,29 +108,103 @@ function dialog_main() {
         2 "Advanced setup"
     )
     menu_items="$(((${#options[@]} / 2)))"
-    menu_title="Create a new system"
+    menu_title="Create new system"
     menu_text="Choose an option."
     cmd=(dialog \
         --backtitle "$DIALOG_BACKTITLE" \
         --title "$menu_title" \
+        --ok-label "Next" \
         --cancel-label "Exit" \
+        --extra-button \
+        --extra-label "Back" \
         --menu "$menu_text" "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$menu_items")
     choice="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
-    if [[ -n "$choice" ]]; then
-        case "$choice" in
-            1)
-                WIZARD_FLAG=1
-                dialog_choose_system_name
-                ;;
-            2)
-                dialog_create_new_system
-                ;;
-        esac
-    else
+    local return_value="$?"
+
+    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+        if [[ -n "$choice" ]]; then
+            case "$choice" in
+                1)
+                    WIZARD_FLAG=1
+                    dialog_choose_system_name
+                    ;;
+                2)
+                    dialog_create_new_system
+                    ;;
+            esac
+        else
+            dialog_msgbox "Error!" "Choose an option."
+        fi
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
         log "Script stopped at $(date +%F\ %T) ... Bye!"
         exit 0
+    elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
+        dialog_main
     fi
 }
+
+
+function dialog_choose_update_system() {
+    echo "Update"
+}
+
+
+function dialog_choose_uninstall_system() {
+    local systems
+    local system
+    local i=1
+    local options=()
+    local menu_items
+    local menu_title
+    local menu_text
+    local cmd
+    local choices
+    local choice
+    local system_name_extensions=()
+
+    systems="$(get_installed_systems)"
+    IFS=" " read -r -a systems <<< "${systems[@]}"
+    for system in "${systems[@]}"; do
+        options+=("$i" "$system" off)
+        ((i++))
+    done
+
+    menu_items="$(((${#options[@]} / 2)))"
+    menu_title="Uninstall systems"
+    menu_text="Choose which systems to uninstall."
+    cmd=(dialog \
+        --backtitle "$DIALOG_BACKTITLE" \
+        --title "$menu_title" \
+        --ok-label "Next" \
+        --cancel-label "Exit" \
+        --extra-button \
+        --extra-label "Back" \
+        --checklist "$menu_text" \
+        "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$menu_items")
+
+    choices="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
+    local return_value="$?"
+
+    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+        if [[ -n "$choices" ]]; then
+            IFS=" " read -r -a choices <<< "${choices[@]}"
+            for choice in "${choices[@]}"; do
+                system="${options[choice*3-2]}"
+                remove_system "$system"
+            done
+            dialog_msgbox "Success!" "System/s removed successfully."
+        else
+            dialog_msgbox "Error!" "Choose at least 1 choice."
+            dialog_choose_uninstall_system
+        fi
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
+        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        exit 0
+    elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
+        dialog_main
+    fi
+}
+
 
 
 function dialog_choose_system_name() {
@@ -170,14 +251,14 @@ function dialog_choose_system_name() {
             SYSTEM_PROPERTIES[6]="theme $SYSTEM_THEME"
             dialog_choose_system_fullname
         else
-            dialog_msgbox "Error!" "Enter the system's name."
+            dialog_msgbox "Error!" "Enter the system's <name>."
             dialog_choose_system_name
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
         log "Script stopped at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
-        dialog_main
+        dialog_choose_create_new_system
     fi
 }
 
@@ -211,7 +292,7 @@ function dialog_choose_system_fullname() {
             SYSTEM_PROPERTIES[1]="fullname $SYSTEM_FULLNAME"
             dialog_choose_platform
         else
-            dialog_msgbox "Error!" "Enter the system's full name."
+            dialog_msgbox "Error!" "Enter the system's <full name>."
             dialog_choose_system_fullname
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
@@ -284,7 +365,7 @@ function dialog_choose_emulators() {
 
     menu_items="$(((${#options[@]} / 2)))"
     menu_title="Wizard setup - Choose systems"
-    menu_text="Choose which systems to use in '$SYSTEM_FULLNAME'.\n\n4 systems maximum."
+    menu_text="Choose which systems to use in '$SYSTEM_NAME'.\n\n4 systems maximum."
     cmd=(dialog \
         --backtitle "$DIALOG_BACKTITLE" \
         --title "$menu_title" \
@@ -355,7 +436,7 @@ function dialog_create_new_system() {
         dialog_title="Create new system"
     fi
     if [[ "$WIZARD_FLAG" -eq 1 ]]; then
-        dialog_text="The new '$SYSTEM_FULLNAME' system is ready to be created!\n\nIf you want to edit a field, you can do so now.\nIf everything is correct, click 'OK'.\n\nWARNING: If you edit 'Name', you'll have to edit 'Path', 'Command' and 'Theme' accordingly.\n\nFields marked with (*) are mandatory."
+        dialog_text="The new '$SYSTEM_NAME' system is ready to be created!\n\nIf you want to edit a field, you can do so now.\nIf everything is correct, click 'OK'.\n\nWARNING: If you edit 'Name', you'll have to edit 'Path', 'Command' and 'Theme' accordingly.\n\nFields marked with (*) are mandatory."
     else
         dialog_text="Fields marked with (*) are mandatory.\n\nMore info at: https://github.com/RetroPie/RetroPie-Setup/wiki/Add-a-New-System-in-EmulationStation"
     fi
@@ -402,8 +483,25 @@ function dialog_create_new_system() {
             done
             create_new_system
             dialog_msgbox "Success!" "System '$SYSTEM_NAME' has been created successfully!"
-            # TODO Check if there are any games before asking
-            dialog_yesno "Add games" "Would you like to add some games to '$SYSTEM_NAME'?" && dialog_choose_games
+
+            local games
+            games="$(get_games)"
+            if [[ -n "$games" ]]; then
+                dialog_yesno "Add ROMS" "Found ROMS for the system/s ("$(join_by , "${NEW_EMULATORS[@]}")") you have chosen!\n\nWould you like to add them to the newly created '$SYSTEM_NAME' system?" 10
+                local return_value="$?"
+                if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
+                    dialog_choose_games
+                fi
+            fi
+
+            # Check if EmulationStation is running
+            if pidof emulationstation > /dev/null; then
+                dialog_yesno "Info" "In order to see the new '$SYSTEM_NAME', EmulationStation need to be restarted.\n\nWould you like to restart EmulationStation?"
+                local return_value="$?"
+                if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
+                    restart_ES
+                fi
+            fi
         else
             dialog_msgbox "Error!" "No input."
             dialog_create_new_system
@@ -415,7 +513,7 @@ function dialog_create_new_system() {
         if [[ "$WIZARD_FLAG" -eq 1 ]]; then
             dialog_choose_platform
         else
-            dialog_main
+            dialog_choose_create_new_system
         fi
     fi
 
@@ -450,15 +548,13 @@ function dialog_choose_games() {
     done
 
     dialog_items="${#options[@]}"
-    dialog_title="Wizard setup - Choose ROMS"
-    dialog_text="Choose which ROMS to use in '$SYSTEM_NAME'."
+    dialog_title="Choose ROMS"
+    dialog_text="Choose which ROMS to add to '$SYSTEM_NAME'."
     cmd=(dialog \
         --backtitle "$DIALOG_BACKTITLE" \
         --title "$dialog_title" \
         --ok-label "Next" \
         --cancel-label "Exit" \
-        --extra-button \
-        --extra-label "Back" \
         --checklist "$dialog_text" \
         "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$dialog_items")
 
@@ -476,14 +572,13 @@ function dialog_choose_games() {
                 rom="${options[choice*3-2]#* - }"
                 create_symbolic_link "$RP_ROMS_DIR/$emulator/$rom" "$RP_ROMS_DIR/$SYSTEM_NAME/$rom"
             done
+            dialog_msgbox "Success!" "ROMS added to '$SYSTEM_NAME' successfully!"
         else
-            echo "Choose a game!"
-            exit 0
+            dialog_msgbox "Error!" "Choose at least 1 game!"
+            dialog_choose_games
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
         log "Script stopped at $(date +%F\ %T) ... Bye!"
         exit 0
-    elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
-        dialog_choose_platform
     fi
 }
