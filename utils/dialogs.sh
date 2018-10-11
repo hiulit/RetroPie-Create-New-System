@@ -87,7 +87,7 @@ function dialog_main() {
                 ;;
         esac
     else
-        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
         exit 0
     fi
 }
@@ -121,7 +121,7 @@ function dialog_choose_create_new_system() {
     choice="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
     local return_value="$?"
 
-    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
         if [[ -n "$choice" ]]; then
             case "$choice" in
                 1)
@@ -136,7 +136,7 @@ function dialog_choose_create_new_system() {
             dialog_msgbox "Error!" "Choose an option."
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
-        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_main
@@ -185,20 +185,26 @@ function dialog_choose_uninstall_system() {
     choices="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
     local return_value="$?"
 
-    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
         if [[ -n "$choices" ]]; then
             IFS=" " read -r -a choices <<< "${choices[@]}"
             for choice in "${choices[@]}"; do
                 system="${options[choice*3-2]}"
                 remove_system "$system"
             done
-            dialog_msgbox "Success!" "System/s removed successfully."
+            local return_value="$?"
+            if [[ "$return_value" -eq 0 ]]; then
+                dialog_msgbox "Success!" "Systems removed successfully."
+            else
+                dialog_msgbox "Error!" "Couldnt' remove some systems..."
+            fi
+            dialog_main
         else
             dialog_msgbox "Error!" "Choose at least 1 choice."
             dialog_choose_uninstall_system
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
-        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_main
@@ -231,7 +237,7 @@ function dialog_choose_system_name() {
                 "$DIALOG_HEIGHT" "$DIALOG_WIDTH" 2>&1 >/dev/tty)"
     local return_value="$?"
 
-    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
         if [[ -n "$input" ]]; then
             if system_exists "$input"; then
                 dialog_msgbox "Error!" "'$input' system already exists."
@@ -255,7 +261,7 @@ function dialog_choose_system_name() {
             dialog_choose_system_name
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
-        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_create_new_system
@@ -286,7 +292,7 @@ function dialog_choose_system_fullname() {
                 "$DIALOG_HEIGHT" "$DIALOG_WIDTH" 2>&1 >/dev/tty)"
     local return_value="$?"
 
-    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
         if [[ -n "$input" ]]; then
             SYSTEM_FULLNAME="$input"
             SYSTEM_PROPERTIES[1]="fullname $SYSTEM_FULLNAME"
@@ -296,7 +302,7 @@ function dialog_choose_system_fullname() {
             dialog_choose_system_fullname
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
-        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_system_name
@@ -326,7 +332,7 @@ function dialog_choose_platform() {
                 "$DIALOG_HEIGHT" "$DIALOG_WIDTH" 2>&1 >/dev/tty)"
     local return_value="$?"
 
-    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
         if [[ -n "$input" ]]; then
             SYSTEM_PLATFORM="$input"
         else
@@ -335,7 +341,7 @@ function dialog_choose_platform() {
         SYSTEM_PROPERTIES[5]="platform $SYSTEM_PLATFORM"
         dialog_choose_emulators
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
-        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_system_fullname
@@ -379,7 +385,7 @@ function dialog_choose_emulators() {
     choices="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
     local return_value="$?"
 
-    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
         if [[ -n "$choices" ]]; then
             IFS=" " read -r -a choices <<< "${choices[@]}"
             if [[ "${#choices[@]}" -gt 4 ]]; then
@@ -400,7 +406,7 @@ function dialog_choose_emulators() {
             dialog_choose_emulators
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
-        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         dialog_choose_platform
@@ -452,7 +458,7 @@ function dialog_create_new_system() {
     form_values="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
     local return_value="$?"
 
-    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
         if [[ -n "$form_values" ]]; then
             local i=0
             while read -r line; do
@@ -507,7 +513,7 @@ function dialog_create_new_system() {
             dialog_create_new_system
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
-        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
         exit 0
     elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
         if [[ "$WIZARD_FLAG" -eq 1 ]]; then
@@ -561,7 +567,7 @@ function dialog_choose_games() {
     choices="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
     local return_value="$?"
 
-    if [[ "$return_value" -eq ""$DIALOG_OK ]]; then
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
         if [[ -n "$choices" ]]; then
             IFS=" " read -r -a choices <<< "${choices[@]}"
             local choice
@@ -578,7 +584,7 @@ function dialog_choose_games() {
             dialog_choose_games
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
-        log "Script stopped at $(date +%F\ %T) ... Bye!"
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
         exit 0
     fi
 }
