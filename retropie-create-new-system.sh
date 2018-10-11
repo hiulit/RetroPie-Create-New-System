@@ -244,9 +244,22 @@ function copy_es_systems_cfg() {
 
 
 function update_system() {
-    echo
-    echo "> Updating values for system '$SYSTEM_NAME' ..."
-    echo
+    while IFS= read -r line; do
+        local key
+        key="$(echo "$line" | grep -o -P '(?<=\<(?!\/))[^\>]+')" # Find characters beween '<' (not followed by '/') and '>'
+        local value
+        value="$(echo "$line" | grep -o -P '(?<=\>).*(?=\<)')" # Find characters between '>' and '<'
+        if [[ -n "$value" ]]; then
+            echo "$key: $value"
+        fi
+        # [[ "$line" != "<system>" || "$line" != "</system>" ]] && echo "$line" # system_names+=("$system_name")
+    done < <(xmlstarlet sel -t -c "systemList/system[name='$system']/node()" "$USER_ES_SYSTEM_CFG" 2> /dev/null)
+
+    # xmlstarlet sel -t -c "systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG"
+    exit
+
+
+    log "Updating values for system '$SYSTEM_NAME' ..."
     local message
     message="New values for '$SYSTEM_NAME':"
     underline "$message"
@@ -289,7 +302,6 @@ function create_system_roms_dir() {
 
 
 function create_new_system() {
-    log
     log "Creating system '$SYSTEM_NAME' ..."
     log
     # Check if <system> exists

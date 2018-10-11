@@ -145,7 +145,64 @@ function dialog_choose_create_new_system() {
 
 
 function dialog_choose_update_system() {
-    echo "Update"
+    local systems
+    local system
+    local i=1
+    local options=()
+    local menu_items
+    local menu_title
+    local menu_text
+    local cmd
+    local choices
+    local choice
+
+    systems="$(get_installed_systems)"
+    IFS=" " read -r -a systems <<< "${systems[@]}"
+    for system in "${systems[@]}"; do
+        options+=("$i" "$system" off)
+        ((i++))
+    done
+
+    menu_items="$(((${#options[@]} / 2)))"
+    menu_title="Update systems"
+    menu_text="Choose which systems to update."
+    cmd=(dialog \
+        --backtitle "$DIALOG_BACKTITLE" \
+        --title "$menu_title" \
+        --ok-label "Next" \
+        --cancel-label "Exit" \
+        --extra-button \
+        --extra-label "Back" \
+        --checklist "$menu_text" \
+        "$DIALOG_HEIGHT" "$DIALOG_WIDTH" "$menu_items")
+
+    choices="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
+    local return_value="$?"
+
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
+        if [[ -n "$choices" ]]; then
+            IFS=" " read -r -a choices <<< "${choices[@]}"
+            for choice in "${choices[@]}"; do
+                system="${options[choice*3-2]}"
+                update_system "$system"
+            done
+            local return_value="$?"
+            if [[ "$return_value" -eq 0 ]]; then
+                dialog_msgbox "Success!" "Systems updated successfully."
+            else
+                dialog_msgbox "Error!" "Couldnt' update some systems..."
+            fi
+            dialog_main
+        else
+            dialog_msgbox "Error!" "Choose at least 1 system."
+            dialog_choose_update_system
+        fi
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
+        exit 0
+    elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
+        dialog_main
+    fi
 }
 
 
@@ -160,7 +217,6 @@ function dialog_choose_uninstall_system() {
     local cmd
     local choices
     local choice
-    local system_name_extensions=()
 
     systems="$(get_installed_systems)"
     IFS=" " read -r -a systems <<< "${systems[@]}"
@@ -200,7 +256,7 @@ function dialog_choose_uninstall_system() {
             fi
             dialog_main
         else
-            dialog_msgbox "Error!" "Choose at least 1 choice."
+            dialog_msgbox "Error!" "Choose at least 1 system."
             dialog_choose_uninstall_system
         fi
     elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
