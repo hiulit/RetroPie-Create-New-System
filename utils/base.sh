@@ -25,7 +25,7 @@ function check_dependencies() {
                 case "$option" in
                     Yes)
                         if ! which apt-get > /dev/null; then
-                            log "ERROR: Can't install '$pkg' automatically. Try to install it manually."
+                            log "ERROR: Can't install '$pkg' automatically. Try to install it manually." >&2
                             exit 1
                         else
                             if sudo apt-get install "$pkg"; then
@@ -35,11 +35,11 @@ function check_dependencies() {
                         fi
                         ;;
                     No)
-                        log "ERROR: Can't launch the script if the '$pkg' package is not installed."
+                        log "ERROR: Can't launch the script if the '$pkg' package is not installed." >&2
                         exit 1
                         ;;
                     *)
-                        echo "Invalid option. Choose a number between 1 and ${#options[@]}."
+                        echo "Invalid option. Choose a number between 1 and ${#options[@]}." >&2
                         ;;
                 esac
             done

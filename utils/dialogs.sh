@@ -61,8 +61,8 @@ function dialog_main() {
     )
     if [[ -n "$(get_installed_systems 2> /dev/null)" ]]; then
         options+=(
-            2 "Update system"
-            3 "Uninstall system"
+            2 "Update systems"
+            3 "Uninstall systems"
         )
     fi
     menu_items="$(((${#options[@]} / 2)))"
@@ -185,12 +185,13 @@ function dialog_choose_update_system() {
             for choice in "${choices[@]}"; do
                 system="${options[choice*3-2]}"
                 update_system "$system"
+                dialog_update_system
             done
             local return_value="$?"
             if [[ "$return_value" -eq 0 ]]; then
                 dialog_msgbox "Success!" "Systems updated successfully."
             else
-                dialog_msgbox "Error!" "Couldnt' update some systems..."
+                dialog_msgbox "Error!" "Couldn't update some systems..."
             fi
             dialog_main
         else
@@ -252,7 +253,7 @@ function dialog_choose_uninstall_system() {
             if [[ "$return_value" -eq 0 ]]; then
                 dialog_msgbox "Success!" "Systems removed successfully."
             else
-                dialog_msgbox "Error!" "Couldnt' remove some systems..."
+                dialog_msgbox "Error!" "Couldn't remove some systems..."
             fi
             dialog_main
         else
@@ -471,6 +472,8 @@ function dialog_choose_emulators() {
 
 
 function dialog_create_new_system() {
+    NEW_SYSTEM_PROPERTIES=()
+
     local options=()
     local i=1
     local dialog_items
@@ -524,9 +527,10 @@ function dialog_create_new_system() {
                 NEW_SYSTEM_PROPERTIES+=("$key $value")
                 ((i++))
             done <<< "$form_values"
+
             # Check if 'name, path, extension or command' are set.
             if ! grep -q -P '(?=.*?name)(?=.*?path)(?=.*?extension)(?=.*?command)^.*$' <<< "${NEW_SYSTEM_PROPERTIES[@]}"; then
-                dialog_msgbox "Error!" "System is missing 'name', 'path', 'extension' or 'command'!"
+                dialog_msgbox "Error!" "System is missing 'name', 'path', 'extension' or 'command'."
                 dialog_create_new_system
             fi
             local property
@@ -538,13 +542,29 @@ function dialog_create_new_system() {
                 # Re-check if 'name, path, extension or command' are set.
                 if [[ "$key" == "name" || "$key" == "path" || "$key" == "extension" || "$key" == "command" ]]; then
                     if [[ -z "$value" ]]; then
-                        dialog_msgbox "Error!" "System is missing 'name', 'path', 'extension' or 'command'!"
+                        dialog_msgbox "Error!" "System is missing 'name', 'path', 'extension' or 'command'."
+                        NEW_SYSTEM_PROPERTIES=()
                         dialog_create_new_system
                     fi
                 fi
+                if [[ "$key" == "name" ]]; then
+                    if [[ -n "$value" ]]; then
+                        if system_exists "$value"; then
+                            dialog_msgbox "Error!" "System '$value' already exists"
+                        fi
+                        if has_space "$value"; then
+                            dialog_msgbox "Error!" "System's name can't have spaces."
+                            SYSTEM_PROPERTIES[0]="name $(echo $value | cut -d' ' -f1)"
+                            NEW_SYSTEM_PROPERTIES=()
+                            dialog_create_new_system
+                        fi
+                    fi
+                fi
             done
+
             create_new_system
-            dialog_msgbox "Success!" "System '$SYSTEM_NAME' has been created successfully!"
+            SYSTEM_NAME="$(echo ${NEW_SYSTEM_PROPERTIES[0]} | cut -d' ' -f2)"
+            dialog_msgbox "Success!" "System '$SYSTEM_NAME' has been created successfully."
 
             local games
             games="$(get_games)"
@@ -555,7 +575,6 @@ function dialog_create_new_system() {
                     dialog_choose_games
                 fi
             fi
-
             # Check if EmulationStation is running
             if pidof emulationstation > /dev/null; then
                 dialog_yesno "Info" "In order to see the new '$SYSTEM_NAME', EmulationStation need to be restarted.\n\nWould you like to restart EmulationStation?"
@@ -563,6 +582,8 @@ function dialog_create_new_system() {
                 if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
                     restart_ES
                 fi
+            else
+                dialog_main
             fi
         else
             dialog_msgbox "Error!" "No input."
@@ -578,7 +599,121 @@ function dialog_create_new_system() {
             dialog_choose_create_new_system
         fi
     fi
+}
 
+
+function dialog_update_system() {
+    NEW_SYSTEM_PROPERTIES=()
+
+    local options=()
+    local i=1
+    local dialog_items
+    local dialog_title
+    local dialog_text
+    local cmd
+    local form_values
+
+    local field
+    for field in "${SYSTEM_FIELDS[@]}"; do
+        local value
+        value="$(echo ${SYSTEM_PROPERTIES[(($i - 1))]} | grep -Po "(?<= ).*")"
+        if is_mandatory_field "$field"; then
+            options+=("${field^}*" $i 1 "$value" $i 15 100 0)
+        else
+            options+=("${field^}" $i 1 "$value" $i 15 100 0)
+        fi
+        ((i++))
+    done
+
+    dialog_items="${#SYSTEM_FIELDS[@]}"
+    dialog_title="Update '$(echo ${SYSTEM_PROPERTIES[0]} | cut -d' ' -f2)' system"
+    dialog_text="WARNING: If you edit 'Name', you'll have to edit 'Path', 'Command' and 'Theme' accordingly.\n\nFields marked with (*) are mandatory."
+
+    cmd=(dialog \
+        --backtitle "$DIALOG_BACKTITLE" \
+        --title "$dialog_title" \
+        --cancel-label "Exit" \
+        --extra-button \
+        --extra-label "Back" \
+        --form "$dialog_text" "$(((DIALOG_HEIGHT + 2)))" "$DIALOG_WIDTH" "$dialog_items")
+
+    form_values="$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)"
+    local return_value="$?"
+
+    if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
+        if [[ -n "$form_values" ]]; then
+            local i=0
+            while read -r line; do
+                local key
+                key="${SYSTEM_FIELDS[$i]}"
+                local value
+                value="$line"
+                [[ -n "$value" ]] && value="$(trim "$value")"
+                NEW_SYSTEM_PROPERTIES+=("$key $value")
+                ((i++))
+            done <<< "$form_values"
+
+            # Check if 'name, path, extension or command' are set.
+            if ! grep -q -P '(?=.*?name)(?=.*?path)(?=.*?extension)(?=.*?command)^.*$' <<< "${NEW_SYSTEM_PROPERTIES[@]}"; then
+                dialog_msgbox "Error!" "System is missing 'name', 'path', 'extension' or 'command'."
+                dialog_update_system
+            fi
+            local property
+            for property in "${NEW_SYSTEM_PROPERTIES[@]}"; do
+                local key
+                local value
+                key="$(echo $property | grep  -Eo "^[^ ]+")"
+                value="$(echo $property | grep -Po "(?<= ).*")"
+                # Re-check if 'name, path, extension or command' are set.
+                if [[ "$key" == "name" || "$key" == "path" || "$key" == "extension" || "$key" == "command" ]]; then
+                    if [[ -z "$value" ]]; then
+                        dialog_msgbox "Error!" "System is missing 'name', 'path', 'extension' or 'command'."
+                        NEW_SYSTEM_PROPERTIES=()
+                        dialog_update_system
+                    fi
+                fi
+                if [[ "$key" == "name" ]]; then
+                    if [[ -n "$value" ]]; then
+                        if system_exists "$value"; then
+                            dialog_msgbox "Error!" "System '$value' already exists"
+                        fi
+                        if has_space "$value"; then
+                            dialog_msgbox "Error!" "System's name can't have spaces."
+                            SYSTEM_PROPERTIES[0]="name $(echo $value | cut -d' ' -f1)"
+                            NEW_SYSTEM_PROPERTIES=()
+                            dialog_update_system
+                        fi
+                    fi
+                fi
+            done
+
+            # Update values
+            underline "New values for '$SYSTEM_NAME'"
+            for system_property in "${NEW_SYSTEM_PROPERTIES[@]}"; do
+                local key
+                local value
+                key="$(echo $system_property | grep  -Eo "^[^ ]+")"
+                value="$(echo $system_property | grep -Po "(?<= ).*")"
+                if [[ "$key" == "name" ]]; then
+                    local system_name
+                    system_name="$(echo ${SYSTEM_PROPERTIES[0]} | cut -d' ' -f2)"
+                else
+                    local system_name
+                    system_name="$(echo ${NEW_SYSTEM_PROPERTIES[0]} | cut -d' ' -f2)"
+                fi
+                if [[ -n "$value" ]]; then
+                    xmlstarlet ed -L -u "/systemList/system[name='$system_name']/$key" -v "$value" "$USER_ES_SYSTEM_CFG"
+                    log "<$key>$value</$key>"
+                fi
+            done
+            log
+        fi
+    elif [[ "$return_value" -eq "$DIALOG_CANCEL" || "$return_value" -eq "$DIALOG_ESC" ]]; then
+        log "Script stopped by the user at $(date +%F\ %T) ... Bye!"
+        exit 0
+    elif [[ "$return_value" -eq "$DIALOG_EXTRA" ]]; then
+        dialog_choose_update_system
+    fi
 }
 
 
@@ -634,7 +769,7 @@ function dialog_choose_games() {
                 rom="${options[choice*3-2]#* - }"
                 create_symbolic_link "$RP_ROMS_DIR/$emulator/$rom" "$RP_ROMS_DIR/$SYSTEM_NAME/$rom"
             done
-            dialog_msgbox "Success!" "ROMS added to '$SYSTEM_NAME' successfully!"
+            dialog_msgbox "Success!" "ROMS added to '$SYSTEM_NAME' successfully."
         else
             dialog_msgbox "Error!" "Choose at least 1 game!"
             dialog_choose_games

@@ -246,37 +246,36 @@ function copy_es_systems_cfg() {
 function update_system() {
     while IFS= read -r line; do
         local key
-        key="$(echo "$line" | grep -o -P '(?<=\<(?!\/))[^\>]+')" # Find characters beween '<' (not followed by '/') and '>'
+        key="$(echo "$line" | grep -o -P '(?<=\<(?!\/))[^\>]+')" # Find characters between '<' (not followed by '/') and '>'
         local value
         value="$(echo "$line" | grep -o -P '(?<=\>).*(?=\<)')" # Find characters between '>' and '<'
         if [[ -n "$value" ]]; then
-            echo "$key: $value"
+            if [[ "$key" != "createdwith" ]]; then
+                if [[ "$key" == "name" ]]; then
+                    SYSTEM_NAME="$value"
+                    SYSTEM_PROPERTIES[0]="$key $SYSTEM_NAME"
+                elif [[ "$key" == "fullname" ]]; then
+                    SYSTEM_FULLNAME="$value"
+                    SYSTEM_PROPERTIES[1]="$key $SYSTEM_FULLNAME"
+                elif [[ "$key" == "path" ]]; then
+                    SYSTEM_PATH="$value"
+                    SYSTEM_PROPERTIES[2]="$key $SYSTEM_PATH"
+                elif [[ "$key" == "extension" ]]; then
+                    SYSTEM_EXTENSION="$value"
+                    SYSTEM_PROPERTIES[3]="$key $SYSTEM_EXTENSION"
+                elif [[ "$key" == "command" ]]; then
+                    SYSTEM_COMMAND="$value"
+                    SYSTEM_PROPERTIES[4]="$key $SYSTEM_COMMAND"
+                elif [[ "$key" == "platform" ]]; then
+                    SYSTEM_PLATFORM="$value"
+                    SYSTEM_PROPERTIES[5]="$key $SYSTEM_PLATFORM"
+                elif [[ "$key" == "theme" ]]; then
+                    SYSTEM_THEME="$value"
+                    SYSTEM_PROPERTIES[6]="$key $SYSTEM_THEME"
+                fi
+            fi
         fi
-        # [[ "$line" != "<system>" || "$line" != "</system>" ]] && echo "$line" # system_names+=("$system_name")
     done < <(xmlstarlet sel -t -c "systemList/system[name='$system']/node()" "$USER_ES_SYSTEM_CFG" 2> /dev/null)
-
-    # xmlstarlet sel -t -c "systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG"
-    exit
-
-
-    log "Updating values for system '$SYSTEM_NAME' ..."
-    local message
-    message="New values for '$SYSTEM_NAME':"
-    underline "$message"
-    for system_property in "${SYSTEM_PROPERTIES[@]}"; do
-        local key
-        local value
-        key="$(echo $system_property | grep  -Eo "^[^ ]+")"
-        value="$(echo $system_property | grep -Po "(?<= ).*")"
-        if [[ -n "$value" ]]; then
-            xmlstarlet ed -L -u "/systemList/system[name='$SYSTEM_NAME']/$key" -v "$value" "$USER_ES_SYSTEM_CFG"
-        else
-            value="-"
-        fi
-        echo "$key: $value"
-    done
-    dashes=
-    for ((i=1; i<="${#message}"; i+=1)); do [[ -n "$dashes" ]] && dashes+="-" || dashes="-"; done && echo "$dashes"
 }
 
 
@@ -306,54 +305,8 @@ function create_new_system() {
     log
     # Check if <system> exists
     if system_exists "$SYSTEM_NAME"; then
-        echo "System '$SYSTEM_NAME' already exists in '$USER_ES_SYSTEM_CFG'."
-
-        exit
-
-        echo
-        # Show <system> values
-        local message
-        message="Current '$SYSTEM_NAME' values:"
-        underline "$message"
-        for system_property in "${SYSTEM_PROPERTIES[@]}"; do
-            local key
-            local value
-            key="$(echo $system_property | grep  -Eo "^[^ ]+")"
-            value="$(echo $system_property | grep -Po "(?<= ).*")"
-            if [[ -z "$value" ]]; then
-                value="-"
-            fi
-            echo "$key: $value"
-        done
-        dashes=
-        for ((i=1; i<="${#message}"; i+=1)); do [[ -n "$dashes" ]] && dashes+="-" || dashes="-"; done && echo "$dashes"
-        echo
-        # Ask if the user wants to update <system> values
-        echo "Would you like to update '$SYSTEM_NAME' values?"
-        local options=("Yes" "No")
-        local option
-        select option in "${options[@]}"; do
-            case "$option" in
-                Yes)
-                    update_system
-                    local return_value
-                    return_value="$?"
-                    if [[ "$return_value" -eq 0 ]]; then
-                        echo
-                        echo "Values for '$SYSTEM_NAME' updated successfully!"
-                    else
-                        echo "ERROR: Couldn't update values for '$SYSTEM_NAME'" >&2
-                    fi
-                    break
-                    ;;
-                No)
-                    break
-                    ;;
-                *)
-                    echo "Invalid option. Choose a number between 1 and ${#options[@]}." >&2
-                    ;;
-            esac
-        done
+        echo "System '$SYSTEM_NAME' already exists in '$USER_ES_SYSTEM_CFG'." >&2
+        exit 1
     else
         # Create a copy of 'es_system_cfg' if it doesn't exists already.
         copy_es_systems_cfg
@@ -366,15 +319,16 @@ function create_new_system() {
             key="$(echo $system_property | grep  -Eo "^[^ ]+")"
             value="$(echo $system_property | grep -Po "(?<= ).*")"
             # Check for missing 'name', 'path', 'extension' or 'command'.
-            if [[ "$key" == "name" || "$key" == "path" || "$key" == "extension" || "$key" == "command"  ]]; then
-                if [[ -z "$key" ]]; then
-                    echo "ERROR: System '$SYSTEM_NAME' is missing 'name', 'path', 'extension' or 'command'!" >&2
-                    # Remove <newSystem>.
-                    xmlstarlet ed -L -d "/systemList/newSystem"  "$USER_ES_SYSTEM_CFG"
-                    exit 1
-                fi
-            fi
+            # if [[ "$key" == "name" || "$key" == "path" || "$key" == "extension" || "$key" == "command"  ]]; then
+            #     if [[ -z "$key" ]]; then
+            #         echo "ERROR: System '$SYSTEM_NAME' is missing 'name', 'path', 'extension' or 'command'!" >&2
+            #         # Remove <newSystem>.
+            #         xmlstarlet ed -L -d "/systemList/newSystem"  "$USER_ES_SYSTEM_CFG"
+            #         exit 1
+            #     fi
+            # fi
             if [[ -n "$value" ]]; then
+                # Create <subnode>
                 xmlstarlet ed -L -s "/systemList/newSystem" -t elem -n "$key" -v "$value" "$USER_ES_SYSTEM_CFG"
                 if [[ "$key" == "path" ]]; then
                     # Create the ROM folder for the new system.
@@ -428,6 +382,7 @@ function remove_system() {
     else
         log "ERROR: Couldn't remove system '$system'. It doesn't exist!" >&2
     fi
+    log
 }
 
 
@@ -533,10 +488,6 @@ function get_options() {
         esac
     fi
 }
-
-
-# remove_system "hola"
-# exit
 
 
 function main() {
