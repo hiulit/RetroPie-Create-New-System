@@ -98,6 +98,24 @@ source "$SCRIPT_DIR/utils/imagemagick.sh"
 
 # Functions ##################################################################
 
+function escape_xml() {
+    if [[ -z "$1" ]]; then
+        echo "ERROR: '$FUNCNAME' needs an XML as an argument!" >&2
+        exit 1
+    fi
+    xmlstarlet esc "$1" 2> /dev/null
+}
+
+
+function validate_xml() {
+    if [[ -z "$1" ]]; then
+        echo "ERROR: '$FUNCNAME' needs an XML as an argument!" >&2
+        exit 1
+    fi
+    xmlstarlet val "$1" 2> /dev/null
+}
+
+
 function get_all_systems() {
     local system_names=()
     local system_name
@@ -311,7 +329,7 @@ function create_new_system() {
         # Create a copy of 'es_system_cfg' if it doesn't exists already.
         copy_es_systems_cfg
         # Create a new <system> called 'newSystem'.
-        xmlstarlet ed -L -s "/systemList" -t elem -n "newSystem" -v "" "$USER_ES_SYSTEM_CFG"
+        xmlstarlet ed -L -s "/systemList" -t elem -n "newSystem" -v "" "$USER_ES_SYSTEM_CFG" 2> /dev/null
         # Add subnodes to <newSystem>.
         for system_property in "${NEW_SYSTEM_PROPERTIES[@]}"; do
             local key
@@ -329,7 +347,7 @@ function create_new_system() {
             # fi
             if [[ -n "$value" ]]; then
                 # Create <subnode>
-                xmlstarlet ed -L -s "/systemList/newSystem" -t elem -n "$key" -v "$value" "$USER_ES_SYSTEM_CFG"
+                xmlstarlet ed -L -s "/systemList/newSystem" -t elem -n "$key" -v "$value" "$USER_ES_SYSTEM_CFG" 2> /dev/null
                 if [[ "$key" == "path" ]]; then
                     # Create the ROM folder for the new system.
                     create_system_roms_dir "$value"
@@ -339,9 +357,9 @@ function create_new_system() {
             fi
         done
         # Add special tag so we can know it's a system created with this script.
-        xmlstarlet ed -L -s "/systemList/newSystem" -t elem -n "createdwith" -v "$SCRIPT_NAME" "$USER_ES_SYSTEM_CFG"
+        xmlstarlet ed -L -s "/systemList/newSystem" -t elem -n "createdwith" -v "$SCRIPT_NAME" "$USER_ES_SYSTEM_CFG" 2> /dev/null
         # Rename <newSystem> to <system>
-        xmlstarlet ed -L -r "/systemList/newSystem" -v "system" "$USER_ES_SYSTEM_CFG"
+        xmlstarlet ed -L -r "/systemList/newSystem" -v "system" "$USER_ES_SYSTEM_CFG" 2> /dev/null
         log
         log "System '$SYSTEM_NAME' created successfully!"
         # local theme
@@ -363,8 +381,8 @@ function remove_system() {
     theme="$(get_current_theme)"
     log "Removing '$system' system ..."
     # Remove system from 'es_system.cfg'
-    if xmlstarlet sel -t -v "/systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null; then
-        xmlstarlet ed -L -d "//system[name='$system']" "$USER_ES_SYSTEM_CFG" > /dev/null
+    if xmlstarlet sel -t -v "/systemList/system[name='$system']" "$USER_ES_SYSTEM_CFG" 2> /dev/null; then
+        xmlstarlet ed -L -d "//system[name='$system']" "$USER_ES_SYSTEM_CFG" 2> /dev/null
         local return_value
         return_value="$?"
         if [[ "$return_value" -eq 0 ]]; then
@@ -375,7 +393,7 @@ function remove_system() {
             # Remove system from theme
             rm -rf "$ES_THEMES_DIR/$theme/$system"
 
-            log "'$system' removed successfully!"
+            log "'$system' system removed successfully!"
         else
             log "ERROR: Couldn't remove system '$system'."
         fi
@@ -431,6 +449,65 @@ function add_emulators_to_system_emulators_cfg() {
     remove_duplicates="$(awk '!a[$0]++' "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg")"
     echo "$remove_duplicates" > "$RP_CONFIG_DIR/$SYSTEM_NAME/emulators.cfg"
     log "Done!"
+}
+
+
+function create_gamelist() {
+    log
+    log "Creating $RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml ..."
+    touch "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml" && chown -R "$user":"$user" "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml"
+    cat > "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml" << _EOF_
+<?xml version="1.0"?>
+<gameList>
+</gameList>
+_EOF_
+    log "Done!"
+    log
+}
+
+
+function add_ROM_to_gamelist() {
+    if [[ -z "$1" ]]; then
+        echo "ERROR: '$FUNCNAME' needs a ROM path as an argument!" >&2
+        exit 1
+    fi
+    if [[ -z "$2" ]]; then
+        echo "ERROR: '$FUNCNAME' needs an emulator path as a second argument!" >&2
+        exit 1
+    fi
+    log "Adding '$rom' ..."
+
+    local rom
+    local emulator
+    local game
+    local name
+    local image
+    local video
+
+    rom="$1"
+    emulator="$2"
+    game="$(xmlstarlet sel -t -c "gameList/game[path[contains(text(),\"$rom\")]]" "$RP_ROMS_DIR/$emulator/gamelist.xml" 2> /dev/null)"
+    name="$(xmlstarlet sel -t -v "gameList/game[path[contains(text(),\"$rom\")]]/name" "$RP_ROMS_DIR/$emulator/gamelist.xml" 2> /dev/null)"
+    image="$(xmlstarlet sel -t -v "gameList/game[path[contains(text(),\"$rom\")]]/image" "$RP_ROMS_DIR/$emulator/gamelist.xml" 2> /dev/null)"
+    video="$(xmlstarlet sel -t -v "gameList/game[path[contains(text(),\"$rom\")]]/video" "$RP_ROMS_DIR/$emulator/gamelist.xml" 2> /dev/null)"
+
+    # Remove </gameList>
+    sed -i -e 's/<\/gameList>//' "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml"
+    # Add <game> subnode
+    echo "$game" >> "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml"
+    # Add closing </gameList>
+    echo "</gameList>" >> "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml"
+
+    log "Done!"
+
+    escape_xml "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml"
+    validate_xml "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml"
+
+    # Append emulator to the name
+    xmlstarlet ed -L -u "gameList/game[path[contains(text(),\"$rom\")]]/name" -v "$name ($emulator)" "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml" 2> /dev/null
+    # Fix path to image and video
+    xmlstarlet ed -L -u "gameList/game[path[contains(text(),\"$rom\")]]/image" -v "./../"$emulator"/$image" "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml" 2> /dev/null
+    xmlstarlet ed -L -u "gameList/game[path[contains(text(),\"$rom\")]]/video" -v "./../"$emulator"/$video" "$RP_ROMS_DIR/$SYSTEM_NAME/gamelist.xml" 2> /dev/null
 }
 
 

@@ -702,7 +702,7 @@ function dialog_update_system() {
                     system_name="$(echo ${NEW_SYSTEM_PROPERTIES[0]} | cut -d' ' -f2)"
                 fi
                 if [[ -n "$value" ]]; then
-                    xmlstarlet ed -L -u "/systemList/system[name='$system_name']/$key" -v "$value" "$USER_ES_SYSTEM_CFG"
+                    xmlstarlet ed -L -u "/systemList/system[name='$system_name']/$key" -v "$value" "$USER_ES_SYSTEM_CFG" 2> /dev/null
                     log "<$key>$value</$key>"
                 fi
             done
@@ -760,6 +760,7 @@ function dialog_choose_games() {
 
     if [[ "$return_value" -eq "$DIALOG_OK" ]]; then
         if [[ -n "$choices" ]]; then
+            create_gamelist
             IFS=" " read -r -a choices <<< "${choices[@]}"
             local choice
             for choice in "${choices[@]}"; do
@@ -768,6 +769,7 @@ function dialog_choose_games() {
                 emulator="${options[choice*3-2]%% - *}"
                 rom="${options[choice*3-2]#* - }"
                 create_symbolic_link "$RP_ROMS_DIR/$emulator/$rom" "$RP_ROMS_DIR/$SYSTEM_NAME/$rom"
+                add_ROM_to_gamelist "$rom" "$emulator"
             done
             dialog_msgbox "Success!" "ROMS added to '$SYSTEM_NAME' successfully."
         else
